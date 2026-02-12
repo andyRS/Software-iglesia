@@ -7,7 +7,12 @@ export const getMyChurch = async (req: AuthRequest, res: Response, next: NextFun
   try {
     const church = await Church.findById(req.churchId);
     if (!church) return res.status(404).json({ success: false, message: 'Iglesia no encontrada' });
-    res.json({ success: true, data: church });
+    // Si no hay logo personalizado, usar el logo por defecto
+    const churchObj = church.toObject();
+    if (!churchObj.logoUrl) {
+      churchObj.logoUrl = '/public/logo.png';
+    }
+    res.json({ success: true, data: churchObj });
   } catch (error) { next(error); }
 };
 

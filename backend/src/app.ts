@@ -34,6 +34,7 @@ app.use(cors({
 // Archivos estáticos (universal, siempre desde el root del proyecto)
 const projectRoot = fs.realpathSync(process.cwd());
 app.use('/uploads', express.static(path.join(projectRoot, 'uploads')));
+app.use('/public', express.static(path.join(projectRoot, 'backend', 'public')));
 
 // ── SEGURIDAD ─────────────────────────────────────────────────────────────────
 app.use(helmet({
