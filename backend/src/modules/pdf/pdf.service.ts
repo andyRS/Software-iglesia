@@ -122,18 +122,24 @@ export class PdfService {
         if (rawLogo.startsWith("http://") || rawLogo.startsWith("https://")) {
           logoUrl = rawLogo;
         } else {
-          // Ruta relativa — buscar en múltiples ubicaciones posibles
-          const logoFilename = rawLogo.replace(/^\/uploads\//, "").replace(/^\//, "");
-          const candidates = [
-            path.join(process.cwd(), "uploads", logoFilename),                    // backend/uploads/
-            path.join(__dirname, "..", "..", "..", "uploads", logoFilename),        // desde src/modules/pdf → backend/uploads/
-            path.join(__dirname, "..", "..", "..", "..", "uploads", logoFilename),  // raiz del proyecto/uploads/
-            path.join(process.cwd(), "public", logoFilename),                     // backend/public/
+          // Extraer solo el nombre del archivo (sin /uploads/, /public/, etc)
+          const logoFilename = path.basename(rawLogo);
+          // Buscar en múltiples directorios y con nombre exacto + "logo.png" como fallback
+          const searchDirs = [
+            path.join(process.cwd(), "uploads"),
+            path.join(__dirname, "..", "..", "..", "uploads"),
+            path.join(process.cwd(), "public"),
           ];
-          for (const candidate of candidates) {
-            if (fs.existsSync(candidate)) {
-              logoUrl = `file://${candidate.replace(/\\/g, "/")}`;
-              break;
+          const searchNames = [logoFilename, "logo.png"];
+
+          for (const dir of searchDirs) {
+            if (logoUrl) break;
+            for (const name of searchNames) {
+              const candidate = path.join(dir, name);
+              if (fs.existsSync(candidate)) {
+                logoUrl = `file://${candidate.replace(/\\/g, "/")}`;
+                break;
+              }
             }
           }
         }
