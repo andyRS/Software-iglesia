@@ -96,7 +96,7 @@ export class PdfService {
       const formattedDate = rawDate.charAt(0).toUpperCase() + rawDate.slice(1);
 
       // Formatear hora IGUAL que el frontend (formatTimeES con AM/PM)
-      const timeStr = (program as any).defaultTime || (program as any).programTime || "";
+      const timeStr = (program as any).programTime || (program as any).defaultTime || "";
       const ampm = (program as any).ampm || "AM";
       let formattedTime = "";
       if (timeStr) {

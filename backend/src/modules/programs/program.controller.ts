@@ -95,7 +95,17 @@ export const getProgram = async (req: AuthRequest, res: Response, next: NextFunc
   try {
     const program = await Program.findOne({ _id: req.params.id, churchId: req.churchId });
     if (!program) throw new NotFoundError('Programa no encontrado');
-    res.json({ success: true, data: program });
+    const data = {
+      ...program.toObject(),
+      defaultTime: (program as any).programTime || '',
+      church: {
+        name: (program as any).churchName || '',
+        subTitle: (program as any).churchSub || '',
+        location: (program as any).location || '',
+        logoUrl: (program as any).logoUrl || '',
+      },
+    };
+    res.json({ success: true, data });
   } catch (error) { next(error); }
 };
 
@@ -227,6 +237,7 @@ export const updateProgram = async (req: AuthRequest, res: Response, next: NextF
       location: req.body.church?.location || req.body.location || '',
       logoUrl: req.body.logoUrl || req.body.church?.logoUrl || '',
       ampm: req.body.ampm || 'AM',
+      programTime: req.body.defaultTime || req.body.programTime || '',
     };
     const program = await Program.findOneAndUpdate({ _id: req.params.id, churchId: req.churchId }, updateData, { new: true, runValidators: true });
     if (!program) throw new NotFoundError('Programa no encontrado');
@@ -243,7 +254,7 @@ export const updateProgram = async (req: AuthRequest, res: Response, next: NextF
         },
         activityType: program.activityType,
         programDate: program.programDate,
-        defaultTime: program.defaultTime,
+        defaultTime: (program as any).programTime || '',
         ampm: program.ampm,
         verse: program.verse,
         assignments: program.assignments,
