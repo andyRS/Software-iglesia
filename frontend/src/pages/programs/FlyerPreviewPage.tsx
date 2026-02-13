@@ -174,6 +174,7 @@ const FlyerPreviewPage = () => {
           worshipTypeId: prog.activityType?.id || '',
           dateInput: prog.programDate ? prog.programDate.slice(0, 10) : '',
           timeInput: prog.defaultTime || '',
+          ampm: prog.ampm || 'AM',
           verse: prog.verse || '',
           logoUrl: prog.church?.logoUrl || '',
         })
@@ -616,16 +617,35 @@ const FlyerPreviewPage = () => {
 
               <div style={styles.formRow}>
                 <FormGroup label="Fecha" id="dateInput" type="date" value={form.dateInput} onChange={handleInput} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <FormGroup label="Hora" id="timeInput" type="time" value={form.timeInput} onChange={handleInput} />
-                  <select
-                    value={form.ampm || 'AM'}
-                    onChange={e => setForm(prev => ({ ...prev, ampm: e.target.value }))}
-                    style={{ height: 36, borderRadius: 6, border: '1px solid #d1d5db', fontSize: 15, fontFamily: 'inherit', padding: '0 8px' }}
-                  >
-                    <option value="AM">AM</option>
-                    <option value="PM">PM</option>
-                  </select>
+                <div style={{ marginBottom: '1rem', flex: 1 }}>
+                  <label htmlFor="timeInput" style={styles.formLabel}>Hora</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input
+                      type="time"
+                      id="timeInput"
+                      step="60"
+                      value={form.timeInput}
+                      onChange={handleInput}
+                      style={{ ...styles.formInput, flex: 1, marginBottom: 0 }}
+                    />
+                    <select
+                      value={form.ampm || 'AM'}
+                      onChange={e => setForm(prev => ({ ...prev, ampm: e.target.value }))}
+                      style={{
+                        ...styles.formInput,
+                        width: 62,
+                        padding: '9px 6px',
+                        marginBottom: 0,
+                        fontWeight: 600,
+                        color: C.navy,
+                        textAlign: 'center' as const,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
