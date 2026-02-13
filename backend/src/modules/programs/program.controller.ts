@@ -302,31 +302,153 @@ export const deleteProgram = async (req: AuthRequest, res: Response, next: NextF
 
 export const getProgramStats = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    // CACHE: stats del dashboard son costosas y cambian poco (TTL 5 min)
     const cacheKey = CacheKeys.dashboardStats(req.churchId!);
     const cached = await cache.get(cacheKey);
     if (cached) {
       return res.json({ success: true, data: cached, cached: true });
     }
 
-    const [totalPersons, totalActivities, totalPrograms, recentPrograms] = await Promise.all([
-      Person.countDocuments({ churchId: req.churchId, status: 'ACTIVE' }),
-      ActivityType.countDocuments({ churchId: req.churchId, isActive: true }),
-      Program.countDocuments({ churchId: req.churchId }),
-      Program.find({ churchId: req.churchId }).sort({ programDate: -1 }).limit(5).select('activityType programDate status assignments'),
-    ]);
+    const churchId = req.churchId!;
+    const now = new Date();
     const last30Days = new Date();
     last30Days.setDate(last30Days.getDate() - 30);
-    const monthPrograms = await Program.find({ churchId: req.churchId, programDate: { $gte: last30Days } });
+
+    // --- Queries paralelas para stats base ---
+    const [
+      totalPersons,
+      totalActivities,
+      totalPrograms,
+      upcomingPrograms,
+      recentPrograms,
+      allPersons,
+      last6MonthsPrograms,
+    ] = await Promise.all([
+      Person.countDocuments({ churchId, status: 'ACTIVE' }),
+      ActivityType.countDocuments({ churchId, isActive: true }),
+      Program.countDocuments({ churchId }),
+      Program.countDocuments({ churchId, programDate: { $gte: now } }),
+      Program.find({ churchId })
+        .sort({ programDate: -1 })
+        .limit(5)
+        .select('activityType programDate status assignments createdAt generatedBy'),
+      Person.find({ churchId, status: 'ACTIVE' }).select('fullName ministry roles').lean(),
+      (() => {
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        return Program.find({ churchId, programDate: { $gte: sixMonthsAgo } })
+          .select('programDate assignments')
+          .lean();
+      })(),
+    ]);
+
+    // --- Distribución por Ministerio ---
+    const ministryCounts: Record<string, number> = {};
+    for (const p of allPersons) {
+      const ministry = (p as any).ministry || 'Sin Ministerio';
+      ministryCounts[ministry] = (ministryCounts[ministry] || 0) + 1;
+    }
+    const MINISTRY_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+    const ministryDistribution = Object.entries(ministryCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value], i) => ({ name, value, color: MINISTRY_COLORS[i % MINISTRY_COLORS.length] }));
+
+    // --- Top Participantes (últimos 6 meses) ---
+    const personParticipations: Record<string, { name: string; count: number }> = {};
+    for (const prog of last6MonthsPrograms) {
+      for (const a of (prog as any).assignments || []) {
+        if (a.person?.id) {
+          const pid = a.person.id.toString();
+          if (!personParticipations[pid]) {
+            personParticipations[pid] = { name: a.person.name || 'Desconocido', count: 0 };
+          }
+          personParticipations[pid].count++;
+        }
+      }
+    }
+    const topParticipants = Object.values(personParticipations)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 7)
+      .map((p) => ({ name: p.name, participations: p.count }));
+
+    // --- Tendencia mensual de participaciones (6 meses) ---
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const monthlyTrend: { month: string; participations: number; programs: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const mKey = `${d.getFullYear()}-${d.getMonth()}`;
+      const label = monthNames[d.getMonth()];
+      let participations = 0;
+      let programs = 0;
+      for (const prog of last6MonthsPrograms) {
+        const pd = new Date((prog as any).programDate);
+        if (`${pd.getFullYear()}-${pd.getMonth()}` === mKey) {
+          programs++;
+          participations += ((prog as any).assignments || []).length;
+        }
+      }
+      monthlyTrend.push({ month: label, participations, programs });
+    }
+
+    // --- Participación del mes actual ---
+    const monthPrograms = last6MonthsPrograms.filter(
+      (p) => new Date((p as any).programDate) >= last30Days
+    );
     const participatingPersons = new Set<string>();
     for (const prog of monthPrograms) {
-      for (const a of prog.assignments) participatingPersons.add(a.person.id.toString());
+      for (const a of (prog as any).assignments || []) {
+        if (a.person?.id) participatingPersons.add(a.person.id.toString());
+      }
     }
-    const participationRate = totalPersons > 0 ? Math.round((participatingPersons.size / totalPersons) * 100) : 0;
-    const statsData = { totalPersons, totalActivities, totalPrograms, participationRate, recentPrograms, programsThisMonth: monthPrograms.length };
+    const participationRate =
+      totalPersons > 0 ? Math.round((participatingPersons.size / totalPersons) * 100) : 0;
+
+    // --- Ministerios activos ---
+    const activeMinistries = new Set(allPersons.map((p: any) => p.ministry).filter(Boolean)).size;
+
+    // --- Actividad reciente (basada en programas reales) ---
+    const recentActivity = recentPrograms.map((prog: any) => {
+      const statusLabels: Record<string, string> = {
+        DRAFT: 'Programa creado',
+        PUBLISHED: 'Programa publicado',
+        COMPLETED: 'Programa completado',
+        CANCELLED: 'Programa cancelado',
+      };
+      const action = statusLabels[prog.status] || 'Programa actualizado';
+      const progDate = new Date(prog.programDate);
+      const description = `${prog.activityType?.name || 'Actividad'} - ${progDate.toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+      const createdAt = prog.createdAt || prog.programDate;
+      const diffMs = now.getTime() - new Date(createdAt).getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffHours / 24);
+      let time = '';
+      if (diffHours < 1) time = 'Hace menos de 1 hora';
+      else if (diffHours < 24) time = `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+      else time = `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+
+      return { action, description, time, status: prog.status };
+    });
+
+    const statsData = {
+      totalPersons,
+      totalActivities,
+      totalPrograms,
+      upcomingPrograms,
+      activeMinistries,
+      participationRate,
+      programsThisMonth: monthPrograms.length,
+      ministryDistribution,
+      topParticipants,
+      monthlyTrend,
+      recentActivity,
+      recentPrograms,
+    };
+
     await cache.set(cacheKey, statsData, CacheTTL.STATS);
     res.json({ success: true, data: statsData });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const previewProgramScoring = async (req: AuthRequest, res: Response, next: NextFunction) => {
