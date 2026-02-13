@@ -174,6 +174,7 @@ const FlyerPreviewPage = () => {
           worshipTypeId: prog.activityType?.id || '',
           dateInput: prog.programDate ? prog.programDate.slice(0, 10) : '',
           timeInput: prog.defaultTime || '',
+          ampm: prog.ampm || 'AM',
           verse: prog.verse || '',
           logoUrl: prog.church?.logoUrl || '',
         })
@@ -616,12 +617,13 @@ const FlyerPreviewPage = () => {
 
               <div style={styles.formRow}>
                 <FormGroup label="Fecha" id="dateInput" type="date" value={form.dateInput} onChange={handleInput} />
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={styles.formLabel}>Hora</label>
+                <div style={{ marginBottom: '1rem', flex: 1 }}>
+                  <label htmlFor="timeInput" style={styles.formLabel}>Hora</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <input
                       type="time"
                       id="timeInput"
+                      step="60"
                       value={form.timeInput}
                       onChange={handleInput}
                       style={{ ...styles.formInput, flex: 1, marginBottom: 0 }}
@@ -636,11 +638,8 @@ const FlyerPreviewPage = () => {
                         marginBottom: 0,
                         fontWeight: 600,
                         color: C.navy,
-                        textAlign: 'center',
+                        textAlign: 'center' as const,
                         cursor: 'pointer',
-                        appearance: 'none' as any,
-                        WebkitAppearance: 'none' as any,
-                        backgroundImage: 'none',
                       }}
                     >
                       <option value="AM">AM</option>
