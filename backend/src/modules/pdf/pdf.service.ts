@@ -21,6 +21,7 @@ Handlebars.registerHelper("addOne", (value: number) => {
   return value + 1;
 });
 Handlebars.registerHelper("padId", (id: any) => String(id).padStart(2, "0"));
+Handlebars.registerHelper("mod", (a: number, b: number) => a % b);
 
 const DAYS_ES = [
   "Domingo",
@@ -57,7 +58,6 @@ export interface PdfResult {
 export class PdfService {
   private templatePath = path.join(__dirname, "templates", "program.hbs");
   private flyerTemplatePath = path.join(__dirname, "templates", "flyer.hbs");
-  private template: Handlebars.TemplateDelegate | null = null;
 
   private getTemplate(flyerStyle = false): Handlebars.TemplateDelegate {
     const templateSource = fs.readFileSync(
@@ -71,66 +71,79 @@ export class PdfService {
     const { program, church, isPro = false, flyerStyle = false } = options;
 
     if (flyerStyle) {
-      // --- FLYER DATA - USA DATOS EXACTOS DEL PROGRAMA ---
+      // --- FLYER DATA - IDÉNTICO AL PREVIEW DEL FRONTEND ---
       const assignments = (program.assignments || []).map(
         (a: any, idx: number) => ({
           id: a.id || a.sectionOrder || idx + 1,
           roleName: a.roleName || a.sectionName || "Sin rol",
-          personName: a.person?.fullName || a.person?.name || "Sin asignar",
+          personName: a.person?.name || a.person?.fullName || "",
         }),
       );
 
-      // Extraer versículo completo del programa
-      let verseText = "";
-      let verseRef = "";
-
       const verseSource = (program as any).verse || "";
 
-      if (verseSource) {
-        // Si el versículo contiene separador, dividirlo
-        const separatorIdx = Math.max(
-          verseSource.lastIndexOf("—"),
-          verseSource.lastIndexOf("-"),
-          verseSource.lastIndexOf("–"),
-        );
+      // Formatear fecha IGUAL que el frontend (formatDateES con Intl es-DO)
+      const dateObj = new Date(program.programDate);
+      // Ajustar para evitar problemas de timezone (igual que frontend: dateStr + 'T12:00:00')
+      const dateForFormat = new Date(dateObj.toISOString().slice(0, 10) + "T12:00:00");
+      const dateOpts: Intl.DateTimeFormatOptions = {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      };
+      const rawDate = dateForFormat.toLocaleDateString("es-DO", dateOpts);
+      const formattedDate = rawDate.charAt(0).toUpperCase() + rawDate.slice(1);
 
-        if (separatorIdx > 0 && separatorIdx < verseSource.length - 5) {
-          verseText = verseSource.slice(0, separatorIdx).trim();
-          verseRef = verseSource.slice(separatorIdx + 1).trim();
-        } else {
-          // Si no hay separador, usar todo como texto
-          verseText = verseSource;
-        }
+      // Formatear hora IGUAL que el frontend (formatTimeES con AM/PM)
+      const timeStr = (program as any).defaultTime || (program as any).programTime || "";
+      const ampm = (program as any).ampm || "AM";
+      let formattedTime = "";
+      if (timeStr) {
+        const parts = timeStr.split(":");
+        let h = parseInt(parts[0]);
+        const m = parts[1] || "00";
+        const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+        formattedTime = `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
       }
 
-      // Usar la fecha y hora EXACTAS guardadas en el programa
-      const dateObj = new Date(program.programDate);
-      const formattedDate = `${DAYS_ES[dateObj.getDay()]}, ${format(dateObj, "d 'de' MMMM yyyy", { locale: es })}`;
-
-      // ✅ CRÍTICO: Usar programTime si existe, sino extraer de programDate
-      const programTime =
-        (program as any).programTime || format(dateObj, "HH:mm");
-
-      // ✅ CRÍTICO: Usar churchName del programa (no de church)
+      // Datos de la iglesia
       const churchName =
         (program as any).churchName || church.name || "Iglesia";
       const subtitle =
-        (program as any).subtitle || (church as any).subTitle || "";
+        (program as any).subtitle || (program as any).churchSub || (church as any).subTitle || "";
+      const location = (program as any).location || "";
       const worshipType = (program as any).activityType?.name || "Culto";
+
+      // Logo: construir URL absoluta como file:// para que Puppeteer pueda cargarla
+      let logoUrl: string | null = null;
+      const rawLogo = (program as any).logoUrl || church.logoUrl || null;
+      if (rawLogo) {
+        if (rawLogo.startsWith("http://") || rawLogo.startsWith("https://")) {
+          logoUrl = rawLogo;
+        } else {
+          // Ruta relativa — resolver como file:// absoluta para Puppeteer
+          const uploadsDir = path.join(__dirname, "..", "..", "..", "..", "uploads");
+          const logoFilename = rawLogo.replace(/^\/uploads\//, "").replace(/^\//, "");
+          const absPath = path.join(uploadsDir, logoFilename);
+          if (fs.existsSync(absPath)) {
+            logoUrl = `file://${absPath.replace(/\\/g, "/")}`;
+          }
+        }
+      }
 
       const templateData = {
         churchName,
+        churchNameUpper: (churchName || "Iglesia").toUpperCase(),
         subtitle,
-        location: "",
+        location,
         worshipType,
         assignments,
         formattedDate,
-        programTime,
-        verseText,
-        verseRef,
-        verse: verseSource, // Versículo completo para el template
+        formattedTime,
+        verse: verseSource,
         summary: (program as any).summary || "",
-        logoUrl: church.logoUrl || null,
+        logoUrl,
       };
 
       const template = this.getTemplate(true);
@@ -211,32 +224,21 @@ export class PdfService {
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
+        "--allow-file-access-from-files",
       ],
     });
 
     const page = await browser.newPage();
-    // En pdf.service.ts línea 202, cambia de:
-    console.log("🔍 HTML GENERADO:", html.substring(0, 500));
-
-    // A:
-    console.log("🔍 HTML GENERADO (primeros 2000):", html.substring(0, 2000));
-    console.log(
-      "🔍 HTML DONDE ESTÁN LOS NÚMEROS:",
-      html.substring(
-        html.indexOf("flyer-row-num"),
-        html.indexOf("flyer-row-num") + 300,
-      ),
-    );
     await page.setContent(html, { waitUntil: "networkidle0" });
 
     // Esperar a que las fuentes de Google se carguen
     await page.evaluateHandle("document.fonts.ready");
-    await new Promise((resolve) => setTimeout(resolve, 3000)); // Esperar 3 segundos adicional
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     const pdfBuffer = await page.pdf({
       format: "Letter",
       printBackground: true,
-      margin: { top: "15mm", right: "15mm", bottom: "20mm", left: "15mm" },
+      margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
     });
 
     await browser.close();
