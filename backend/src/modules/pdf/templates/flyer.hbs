@@ -4,331 +4,282 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>{{churchName}} - {{worshipType}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap"/>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Playfair+Display:wght@600;700&display=swap');
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'Playfair Display', serif;
-    background: #F9FAFB;
-    color: #1F2937;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem 1rem;
+  /* ═══════════════════════════════════════════════════
+     FLYER PROFESIONAL — Full-page Letter (8.5 × 11 in)
+     Optimizado para PDF via Puppeteer, sin bordes
+     redondeados en container (se cortan al imprimir).
+     ═══════════════════════════════════════════════════ */
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{
+    width:100%;height:100%;margin:0;padding:0;
+    font-family:'DM Sans',Helvetica,Arial,sans-serif;
+    background:#fff;color:#1B2D5B;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
   }
 
-  .flyer-container {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.12);
-    overflow: hidden;
-    width: 100%;
-    max-width: 650px;
-    margin: 0 auto;
+  .page{
+    width:100%;
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
   }
 
-  .flyer-header {
-    background: linear-gradient(135deg, #2c4875 0%, #3d5a80 100%);
-    padding: 2.5rem 3rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  /* ─── HEADER ─── edge-to-edge, sin border-radius */
+  .hdr{
+    background:linear-gradient(135deg,#1B2D5B 0%,#253E78 50%,#1B2D5B 100%);
+    padding:3rem 3.5rem 2.2rem;
+    position:relative;
+    overflow:hidden;
+  }
+  .hdr::before{
+    content:'';position:absolute;top:-70px;right:-70px;
+    width:220px;height:220px;
+    background:rgba(200,168,75,.07);border-radius:50%;
+  }
+  .hdr::after{
+    content:'';position:absolute;bottom:-40px;left:-50px;
+    width:160px;height:160px;
+    background:rgba(200,168,75,.05);border-radius:50%;
   }
 
-  .header-text {
-    flex: 1;
+  .hdr-inner{
+    display:flex;align-items:center;gap:1.8rem;
+    position:relative;z-index:1;
+  }
+  .hdr-text{
+    flex:1;display:flex;flex-direction:column;
+    align-items:center;text-align:center;
+  }
+  .hdr-name{
+    font-family:'Cormorant Garamond',Georgia,serif;
+    font-size:2rem;font-weight:700;color:#fff;
+    line-height:1.15;letter-spacing:.03em;
+  }
+  .hdr-sub{
+    font-size:.9rem;color:#E8C96A;
+    letter-spacing:.06em;margin-top:8px;
+    font-weight:500;
+  }
+  .hdr-loc{
+    font-size:.75rem;color:rgba(255,255,255,.45);margin-top:5px;
   }
 
-  .flyer-church-name {
-    font-family: 'Playfair Display', serif;
-    font-size: 2rem;
-    font-weight: 700;
-    color: white;
-    line-height: 1.2;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
+  .logo{flex-shrink:0;width:74px;height:74px}
+  .logo img{
+    width:74px;height:74px;border-radius:12px;
+    object-fit:contain;
+    border:2.5px solid rgba(200,168,75,.45);
+    background:rgba(255,255,255,.08);
+  }
+  .logo-fb{
+    width:74px;height:74px;border-radius:12px;
+    background:rgba(255,255,255,.08);
+    border:2.5px solid rgba(200,168,75,.4);
+    display:flex;align-items:center;justify-content:center;
+    font-size:2.2rem;color:rgba(255,255,255,.55);
   }
 
-  .flyer-church-sub {
-    font-size: 0.875rem;
-    color: rgba(255,255,255,0.8);
-    margin-top: 0.25rem;
-    font-weight: 400;
+  /* ─── GOLD BAND ─── full-width shimmer */
+  .gold{
+    height:5px;flex-shrink:0;
+    background:linear-gradient(90deg,#B8963F,#E8C96A 30%,#F5DFA0 50%,#E8C96A 70%,#B8963F);
   }
 
-  .logo-circle {
-    width: 80px;
-    height: 80px;
-    background: rgba(255,255,255,0.15);
-    border: 3px solid rgba(255,255,255,0.3);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    margin-left: 2rem;
+  /* ─── BODY ─── flex:1 fills remaining space */
+  .body{
+    flex:1;
+    display:flex;flex-direction:column;
+    align-items:center;
+    padding:2rem 3.5rem 1.2rem;
   }
 
-  .logo-circle img {
-    width: 70px;
-    height: 70px;
-    object-fit: contain;
+  /* ─── BADGE ─── */
+  .badge{
+    display:inline-block;
+    background:linear-gradient(135deg,#C8A84B,#E0BE5A);
+    color:#1B2D5B;
+    font-family:'Cormorant Garamond',Georgia,serif;
+    font-size:1.2rem;font-weight:700;
+    padding:9px 36px;border-radius:30px;
+    letter-spacing:.07em;text-transform:uppercase;
+    margin-bottom:1.1rem;
   }
 
-  .logo-placeholder {
-    font-size: 2.5rem;
-    filter: grayscale(1) opacity(0.6);
+  /* ─── DATE / TIME ─── */
+  .dt{text-align:center;margin-bottom:1rem}
+  .dt-date{
+    font-family:'Cormorant Garamond',Georgia,serif;
+    font-size:1.2rem;color:#1B2D5B;font-weight:600;
+  }
+  .dt-time{font-size:.85rem;color:#6B7280;margin-top:4px}
+
+  /* ─── ORNAMENT ─── */
+  .orn{
+    display:flex;align-items:center;gap:10px;
+    width:80%;max-width:440px;
+    margin:0 auto 1rem;
+  }
+  .orn-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,#CBD5E1,transparent)}
+  .orn-d{display:flex;gap:6px}
+  .orn-d i{
+    display:block;width:7px;height:7px;
+    background:#C8A84B;transform:rotate(45deg);
+  }
+  .orn-d i:first-child,.orn-d i:last-child{opacity:.5}
+  .orn-d i:nth-child(2){opacity:1}
+
+  /* ─── SECTION TITLE ─── */
+  .sec-title{
+    font-size:.72rem;font-weight:700;
+    letter-spacing:.2em;text-transform:uppercase;
+    color:#1B2D5B;margin-bottom:1rem;
   }
 
-  .gold-band {
-    height: 5px;
-    background: linear-gradient(90deg, transparent 0%, #C8A84B 20%, #E8C96A 50%, #C8A84B 80%, transparent 100%);
+  /* ─── TABLE ─── full width of body */
+  .tbl{
+    width:100%;
+    margin-bottom:auto;
   }
 
-  .flyer-badge-row {
-    display: flex;
-    justify-content: center;
-    padding: 2rem 3rem 1rem;
+  .row{
+    display:flex;align-items:center;
+    padding:12px 16px;
+    border-radius:8px;
+    margin-bottom:5px;
+    min-height:50px;
+  }
+  .row-even{background:#F3F4F6}
+  .row-odd{background:#fff;border:1px solid #EEF0F3}
+
+  .row-num{
+    flex-shrink:0;width:28px;height:28px;
+    background:#1B2D5B;color:#E8C96A;
+    border-radius:6px;
+    font-size:.72rem;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    margin-right:14px;
+  }
+  .row-role{
+    flex-shrink:0;width:160px;
+    font-size:.88rem;font-weight:600;color:#1B2D5B;
+  }
+  .row-person{
+    flex:1;
+    font-family:'Cormorant Garamond',Georgia,serif;
+    font-size:1.1rem;font-weight:600;
+    color:#111827;font-style:italic;
+  }
+  .row-empty{
+    flex:1;color:#CBD5E1;
+    font-size:.82rem;letter-spacing:.04em;
   }
 
-  .flyer-badge {
-    background: linear-gradient(135deg, #C8A84B 0%, #E8C96A 100%);
-    color: #1B2D5B;
-    font-family: 'Playfair Display', serif;
-    font-size: 1.25rem;
-    font-weight: 700;
-    padding: 0.75rem 3rem;
-    border-radius: 50px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    box-shadow: 0 4px 12px rgba(200,168,75,0.3);
+  /* ─── VERSE ─── */
+  .verse{
+    text-align:center;
+    padding:1.4rem 2.5rem .8rem;
+    border-top:1px solid #EEF0F3;
+    margin-top:1.5rem;
+    width:100%;
+  }
+  .verse p{
+    font-family:'Cormorant Garamond',Georgia,serif;
+    font-size:1rem;font-style:italic;
+    color:#6B7280;line-height:1.6;margin:0;
   }
 
-  .flyer-date-row {
-    text-align: center;
-    padding: 1.25rem 3rem 0.75rem;
+  /* ─── FOOTER ─── edge-to-edge, sticks to bottom */
+  .ftr{
+    background:linear-gradient(135deg,#1B2D5B 0%,#253E78 100%);
+    padding:16px 3.5rem;
+    text-align:center;
+    flex-shrink:0;
+  }
+  .ftr span{
+    font-size:.75rem;font-weight:600;
+    color:rgba(255,255,255,.6);
+    letter-spacing:.12em;text-transform:uppercase;
   }
 
-  .flyer-date {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.35rem;
-    color: #1B2D5B;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    text-transform: capitalize;
-  }
-
-  .flyer-time {
-    font-size: 1.1rem;
-    color: #6B7280;
-    font-weight: 400;
-  }
-
-  .ornament {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.5rem 3rem;
-  }
-
-  .ornament-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #D1D5DB, transparent);
-  }
-
-  .ornament-diamonds {
-    display: flex;
-    gap: 6px;
-  }
-
-  .ornament-diamonds span {
-    display: block;
-    width: 7px;
-    height: 7px;
-    background: #C8A84B;
-    transform: rotate(45deg);
-    opacity: 0.6;
-  }
-
-  .ornament-diamonds span:nth-child(2) {
-    opacity: 1;
-    transform: rotate(45deg) scale(1.2);
-  }
-
-  .flyer-section-title {
-    text-align: center;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: #2c4875;
-    padding-bottom: 1.25rem;
-    font-family: 'Playfair Display', serif;
-  }
-
-  .flyer-table {
-    padding: 0 2.5rem 2rem;
-  }
-
-  .flyer-row {
-    display: flex;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-radius: 10px;
-    margin-bottom: 0.5rem;
-    min-height: 56px;
-  }
-
-  .flyer-row:nth-child(odd) {
-    background: #F3F4F6;
-  }
-
-  .flyer-row:nth-child(even) {
-    background: white;
-  }
-
-  .flyer-row-num {
-    flex-shrink: 0;
-    width: 34px;
-    height: 34px;
-    background: #2c4875;
-    color: #E8C96A;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 1.25rem;
-    font-family: 'Playfair Display', serif;
-  }
-
-  .flyer-row-role {
-    flex: 0 0 auto;
-    width: 180px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #1F2937;
-    font-family: 'Playfair Display', serif;
-  }
-
-  .flyer-row-person {
-    flex: 1;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #111827;
-    font-style: italic;
-    text-align: right;
-  }
-
-  .flyer-row-person.empty {
-    color: #D1D5DB;
-    font-style: normal;
-    font-size: 0.875rem;
-  }
-
-  .flyer-verse {
-    text-align: center;
-    padding: 0 3rem 1rem;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 0.75rem;
-    font-style: italic;
-    color: #6B7280;
-    line-height: 1.5;
-  }
-
-  .flyer-footer {
-    background: #2c4875;
-    padding: 1.25rem 3rem;
-    text-align: center;
-  }
-
-  .flyer-footer-text {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: rgba(255,255,255,0.85);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    font-family: 'Playfair Display', serif;
-  }
-
-  @media print {
-    body {
-      background: white;
-      padding: 0;
-    }
-    .flyer-container {
-      box-shadow: none;
-      max-width: 100%;
-    }
+  @media print{
+    html,body{height:100%}
+    .page{height:100%}
   }
 </style>
 </head>
 <body>
-<div class="flyer-container">
+<div class="page">
 
-  <div class="flyer-header">
-    <div class="header-text">
-      <div class="flyer-church-name">{{churchName}}</div>
-      {{#if subtitle}}
-      <div class="flyer-church-sub">{{subtitle}}</div>
-      {{/if}}
-    </div>
-    <div class="logo-circle">
-      {{#if logoUrl}}
-      <img src="{{logoUrl}}" alt="Logo">
-      {{else}}
-      <div class="logo-placeholder">🕊</div>
-      {{/if}}
-    </div>
-  </div>
-
-  <div class="gold-band"></div>
-
-  <div class="flyer-badge-row">
-    <div class="flyer-badge">{{worshipType}}</div>
-  </div>
-
-  <div class="flyer-date-row">
-    <div class="flyer-date">{{formattedDate}}</div>
-    <div class="flyer-time">{{programTime}}</div>
-  </div>
-
-  <div class="ornament">
-    <div class="ornament-line"></div>
-    <div class="ornament-diamonds">
-      <span></span><span></span><span></span>
-    </div>
-    <div class="ornament-line"></div>
-  </div>
-
-  <div class="flyer-section-title">Orden del Culto</div>
-
-  <div class="flyer-table">
-    {{#each assignments}}
-    <div class="flyer-row">
-      <div class="flyer-row-num">{{padId id}}</div>
-      <div class="flyer-row-role">{{roleName}}</div>
-      <div class="flyer-row-person{{#unless personName}} empty{{/unless}}">
-        {{#if personName}}{{personName}}{{else}}Sin asignar{{/if}}
+  <!-- ══════ HEADER ══════ -->
+  <div class="hdr">
+    <div class="hdr-inner">
+      <div class="hdr-text">
+        <div class="hdr-name">{{churchName}}</div>
+        {{#if subtitle}}<div class="hdr-sub">{{subtitle}}</div>{{/if}}
+        {{#if location}}<div class="hdr-loc">{{location}}</div>{{/if}}
+      </div>
+      <div class="logo">
+        {{#if logoUrl}}
+        <img src="{{logoUrl}}" alt="Logo"/>
+        {{else}}
+        <div class="logo-fb">&#10013;</div>
+        {{/if}}
       </div>
     </div>
-    {{/each}}
   </div>
 
-  {{#if verse}}
-  <div class="flyer-verse">
-    {{verse}}
-  </div>
-  {{/if}}
+  <!-- ══════ GOLD BAND ══════ -->
+  <div class="gold"></div>
 
-  <div class="flyer-footer">
-    <span class="flyer-footer-text">{{churchName}}</span>
+  <!-- ══════ BODY ══════ -->
+  <div class="body">
+
+    <div class="badge">{{worshipType}}</div>
+
+    <div class="dt">
+      <div class="dt-date">{{formattedDate}}</div>
+      {{#if formattedTime}}<div class="dt-time">{{formattedTime}}</div>{{/if}}
+    </div>
+
+    <div class="orn">
+      <div class="orn-line"></div>
+      <div class="orn-d"><i></i><i></i><i></i></div>
+      <div class="orn-line"></div>
+    </div>
+
+    <div class="sec-title">Orden del Culto</div>
+
+    <div class="tbl">
+      {{#each assignments}}
+      <div class="row {{#if (eq (mod @index 2) 0)}}row-even{{else}}row-odd{{/if}}">
+        <div class="row-num">{{padId (addOne @index)}}</div>
+        <div class="row-role">{{roleName}}</div>
+        {{#if personName}}
+        <div class="row-person">{{personName}}</div>
+        {{else}}
+        <div class="row-empty">&mdash; &mdash; &mdash; &mdash; &mdash; &mdash; &mdash;</div>
+        {{/if}}
+      </div>
+      {{/each}}
+    </div>
+
+    {{#if verse}}
+    <div class="verse">
+      <p>{{verse}}</p>
+    </div>
+    {{/if}}
+
+  </div>
+
+  <!-- ══════ FOOTER ══════ -->
+  <div class="ftr">
+    <span>{{churchNameUpper}}</span>
   </div>
 
 </div>
