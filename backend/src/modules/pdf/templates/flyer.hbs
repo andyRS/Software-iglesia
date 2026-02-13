@@ -8,226 +8,216 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap"/>
 <style>
+  /* ═══════════════════════════════════════════════════
+     FLYER PROFESIONAL — Full-page Letter (8.5 × 11 in)
+     Optimizado para PDF via Puppeteer, sin bordes
+     redondeados en container (se cortan al imprimir).
+     ═══════════════════════════════════════════════════ */
   *{box-sizing:border-box;margin:0;padding:0}
-
-  body{
+  html,body{
+    width:100%;height:100%;margin:0;padding:0;
     font-family:'DM Sans',Helvetica,Arial,sans-serif;
-    background:#fff;
-    color:#111827;
-    display:flex;
-    justify-content:center;
-    padding:0;
+    background:#fff;color:#1B2D5B;
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
   }
 
-  /* ═══ CONTAINER ═══ */
-  .flyer{
-    background:#fff;
+  .page{
     width:100%;
-    max-width:520px;
-    margin:0 auto;
-    overflow:hidden;
-    border-radius:14px;
-    box-shadow:0 8px 32px rgba(0,0,0,.10);
-  }
-
-  /* ═══ HEADER ═══ */
-  .hdr{
-    background:linear-gradient(135deg,#1B2D5B 0%,#2A4080 60%,#1B2D5B 100%);
-    padding:2.2rem 1.8rem 1.4rem;
-    position:relative;
-    overflow:hidden;
-  }
-  .hdr-c1{position:absolute;top:-40px;right:-40px;width:150px;height:150px;background:rgba(200,168,75,.08);border-radius:50%}
-  .hdr-c2{position:absolute;bottom:-20px;left:-30px;width:110px;height:110px;background:rgba(200,168,75,.05);border-radius:50%}
-
-  .hdr-inner{
-    display:flex;
-    align-items:center;
-    gap:1rem;
-    position:relative;
-    z-index:1;
-  }
-  .hdr-text{
-    flex:1;
+    height:100vh;
     display:flex;
     flex-direction:column;
-    align-items:center;
-    text-align:center;
+    overflow:hidden;
+  }
+
+  /* ─── HEADER ─── edge-to-edge, sin border-radius */
+  .hdr{
+    background:linear-gradient(135deg,#1B2D5B 0%,#253E78 50%,#1B2D5B 100%);
+    padding:3rem 3.5rem 2.2rem;
+    position:relative;
+    overflow:hidden;
+  }
+  .hdr::before{
+    content:'';position:absolute;top:-70px;right:-70px;
+    width:220px;height:220px;
+    background:rgba(200,168,75,.07);border-radius:50%;
+  }
+  .hdr::after{
+    content:'';position:absolute;bottom:-40px;left:-50px;
+    width:160px;height:160px;
+    background:rgba(200,168,75,.05);border-radius:50%;
+  }
+
+  .hdr-inner{
+    display:flex;align-items:center;gap:1.8rem;
+    position:relative;z-index:1;
+  }
+  .hdr-text{
+    flex:1;display:flex;flex-direction:column;
+    align-items:center;text-align:center;
   }
   .hdr-name{
     font-family:'Cormorant Garamond',Georgia,serif;
-    font-size:1.3rem;
-    font-weight:700;
-    color:#fff;
-    line-height:1.15;
-    letter-spacing:.02em;
-    margin-bottom:4px;
+    font-size:2rem;font-weight:700;color:#fff;
+    line-height:1.15;letter-spacing:.03em;
   }
-  .hdr-sub{font-size:.72rem;color:#E8C96A;letter-spacing:.05em;margin-top:2px}
-  .hdr-loc{font-size:.64rem;color:rgba(255,255,255,.45);margin-top:2px}
+  .hdr-sub{
+    font-size:.9rem;color:#E8C96A;
+    letter-spacing:.06em;margin-top:8px;
+    font-weight:500;
+  }
+  .hdr-loc{
+    font-size:.75rem;color:rgba(255,255,255,.45);margin-top:5px;
+  }
 
-  .logo{
-    flex-shrink:0;
-    width:56px;
-    height:56px;
-  }
+  .logo{flex-shrink:0;width:74px;height:74px}
   .logo img{
-    width:56px;height:56px;
-    border-radius:10px;
+    width:74px;height:74px;border-radius:12px;
     object-fit:contain;
-    border:2px solid rgba(200,168,75,.4);
+    border:2.5px solid rgba(200,168,75,.45);
     background:rgba(255,255,255,.08);
   }
   .logo-fb{
-    width:56px;height:56px;
+    width:74px;height:74px;border-radius:12px;
     background:rgba(255,255,255,.08);
-    border:2px solid rgba(200,168,75,.45);
-    border-radius:10px;
+    border:2.5px solid rgba(200,168,75,.4);
     display:flex;align-items:center;justify-content:center;
-    font-size:1.5rem;color:rgba(255,255,255,.6);
+    font-size:2.2rem;color:rgba(255,255,255,.55);
   }
 
-  /* ═══ GOLD BAND ═══ */
-  .gold{height:4px;background:linear-gradient(90deg,#C8A84B,#E8C96A 50%,#C8A84B)}
+  /* ─── GOLD BAND ─── full-width shimmer */
+  .gold{
+    height:5px;flex-shrink:0;
+    background:linear-gradient(90deg,#B8963F,#E8C96A 30%,#F5DFA0 50%,#E8C96A 70%,#B8963F);
+  }
 
-  /* ═══ BADGE ═══ */
-  .badge-row{display:flex;justify-content:center;padding:1rem 2rem .35rem}
+  /* ─── BODY ─── flex:1 fills remaining space */
+  .body{
+    flex:1;
+    display:flex;flex-direction:column;
+    align-items:center;
+    padding:2rem 3.5rem 1.2rem;
+  }
+
+  /* ─── BADGE ─── */
   .badge{
-    background:#C8A84B;
+    display:inline-block;
+    background:linear-gradient(135deg,#C8A84B,#E0BE5A);
     color:#1B2D5B;
     font-family:'Cormorant Garamond',Georgia,serif;
-    font-size:1.05rem;
-    font-weight:700;
-    padding:5px 22px;
-    border-radius:28px;
-    letter-spacing:.06em;
-    text-transform:uppercase;
+    font-size:1.2rem;font-weight:700;
+    padding:9px 36px;border-radius:30px;
+    letter-spacing:.07em;text-transform:uppercase;
+    margin-bottom:1.1rem;
   }
 
-  /* ═══ DATE / TIME ═══ */
-  .dt{text-align:center;padding:.35rem 2rem .15rem}
+  /* ─── DATE / TIME ─── */
+  .dt{text-align:center;margin-bottom:1rem}
   .dt-date{
     font-family:'Cormorant Garamond',Georgia,serif;
-    font-size:1rem;
-    color:#1B2D5B;
-    font-weight:600;
+    font-size:1.2rem;color:#1B2D5B;font-weight:600;
   }
-  .dt-time{font-size:.76rem;color:#6B7280;margin-top:1px}
+  .dt-time{font-size:.85rem;color:#6B7280;margin-top:4px}
 
-  /* ═══ ORNAMENT ═══ */
-  .orn{display:flex;align-items:center;gap:7px;padding:.4rem 2rem}
-  .orn-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,#D1D5DB,transparent)}
-  .orn-d{display:flex;gap:4px}
-  .orn-d span{display:block;width:5px;height:5px;background:#C8A84B;transform:rotate(45deg)}
-  .orn-d span:first-child,.orn-d span:last-child{opacity:.65}
-  .orn-d span:nth-child(2){opacity:1}
+  /* ─── ORNAMENT ─── */
+  .orn{
+    display:flex;align-items:center;gap:10px;
+    width:80%;max-width:440px;
+    margin:0 auto 1rem;
+  }
+  .orn-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,#CBD5E1,transparent)}
+  .orn-d{display:flex;gap:6px}
+  .orn-d i{
+    display:block;width:7px;height:7px;
+    background:#C8A84B;transform:rotate(45deg);
+  }
+  .orn-d i:first-child,.orn-d i:last-child{opacity:.5}
+  .orn-d i:nth-child(2){opacity:1}
 
-  /* ═══ SECTION TITLE ═══ */
+  /* ─── SECTION TITLE ─── */
   .sec-title{
-    text-align:center;
-    font-size:.62rem;
-    font-weight:700;
-    letter-spacing:.15em;
-    text-transform:uppercase;
-    color:#1B2D5B;
-    padding-bottom:.4rem;
+    font-size:.72rem;font-weight:700;
+    letter-spacing:.2em;text-transform:uppercase;
+    color:#1B2D5B;margin-bottom:1rem;
   }
 
-  /* ═══ TABLE ═══ */
-  .tbl{padding:0 1.4rem .8rem}
+  /* ─── TABLE ─── full width of body */
+  .tbl{
+    width:100%;
+    margin-bottom:auto;
+  }
 
   .row{
-    display:flex;
-    align-items:center;
-    padding:9px 11px;
-    border-radius:7px;
-    margin-bottom:3px;
-    min-height:40px;
+    display:flex;align-items:center;
+    padding:12px 16px;
+    border-radius:8px;
+    margin-bottom:5px;
+    min-height:50px;
   }
   .row-even{background:#F3F4F6}
-  .row-odd{background:#fff;border:1px solid #F3F4F6}
+  .row-odd{background:#fff;border:1px solid #EEF0F3}
 
   .row-num{
-    flex-shrink:0;
-    width:22px;height:22px;
-    background:#1B2D5B;
-    color:#E8C96A;
-    border-radius:5px;
-    font-size:.62rem;
-    font-weight:700;
+    flex-shrink:0;width:28px;height:28px;
+    background:#1B2D5B;color:#E8C96A;
+    border-radius:6px;
+    font-size:.72rem;font-weight:700;
     display:flex;align-items:center;justify-content:center;
-    margin-right:9px;
-    font-family:'DM Sans',Helvetica,sans-serif;
+    margin-right:14px;
   }
   .row-role{
-    flex-shrink:0;
-    width:130px;
-    font-size:.78rem;
-    font-weight:600;
-    color:#1B2D5B;
+    flex-shrink:0;width:160px;
+    font-size:.88rem;font-weight:600;color:#1B2D5B;
   }
   .row-person{
     flex:1;
     font-family:'Cormorant Garamond',Georgia,serif;
-    font-size:.95rem;
-    font-weight:600;
-    color:#111827;
-    font-style:italic;
+    font-size:1.1rem;font-weight:600;
+    color:#111827;font-style:italic;
   }
   .row-empty{
-    flex:1;
-    color:#D1D5DB;
-    font-size:.74rem;
-    font-weight:400;
-    letter-spacing:.03em;
+    flex:1;color:#CBD5E1;
+    font-size:.82rem;letter-spacing:.04em;
   }
 
-  /* ═══ VERSE ═══ */
+  /* ─── VERSE ─── */
   .verse{
     text-align:center;
-    padding:.7rem 1.8rem .4rem;
-    border-top:1px solid #F3F4F6;
-    margin:0 1.4rem;
+    padding:1.4rem 2.5rem .8rem;
+    border-top:1px solid #EEF0F3;
+    margin-top:1.5rem;
+    width:100%;
   }
   .verse p{
     font-family:'Cormorant Garamond',Georgia,serif;
-    font-size:.84rem;
-    font-style:italic;
-    color:#6B7280;
-    line-height:1.5;
-    margin:0;
+    font-size:1rem;font-style:italic;
+    color:#6B7280;line-height:1.6;margin:0;
   }
 
-  /* ═══ FOOTER ═══ */
+  /* ─── FOOTER ─── edge-to-edge, sticks to bottom */
   .ftr{
-    background:#1B2D5B;
-    padding:9px 2rem;
-    display:flex;align-items:center;justify-content:center;
-    margin-top:.7rem;
+    background:linear-gradient(135deg,#1B2D5B 0%,#253E78 100%);
+    padding:16px 3.5rem;
+    text-align:center;
+    flex-shrink:0;
   }
   .ftr span{
-    font-size:.68rem;
-    font-weight:600;
-    color:rgba(255,255,255,.65);
-    letter-spacing:.08em;
-    text-transform:uppercase;
+    font-size:.75rem;font-weight:600;
+    color:rgba(255,255,255,.6);
+    letter-spacing:.12em;text-transform:uppercase;
   }
 
   @media print{
-    body{background:#fff;padding:0}
-    .flyer{box-shadow:none;border-radius:0;max-width:100%}
+    html,body{height:100%}
+    .page{height:100%}
   }
 </style>
 </head>
 <body>
-<div class="flyer">
+<div class="page">
 
-  <!-- HEADER -->
+  <!-- ══════ HEADER ══════ -->
   <div class="hdr">
-    <div class="hdr-c1"></div>
-    <div class="hdr-c2"></div>
     <div class="hdr-inner">
       <div class="hdr-text">
         <div class="hdr-name">{{churchName}}</div>
@@ -244,53 +234,50 @@
     </div>
   </div>
 
-  <!-- GOLD BAND -->
+  <!-- ══════ GOLD BAND ══════ -->
   <div class="gold"></div>
 
-  <!-- BADGE -->
-  <div class="badge-row">
+  <!-- ══════ BODY ══════ -->
+  <div class="body">
+
     <div class="badge">{{worshipType}}</div>
-  </div>
 
-  <!-- DATE & TIME -->
-  <div class="dt">
-    <div class="dt-date">{{formattedDate}}</div>
-    {{#if formattedTime}}<div class="dt-time">{{formattedTime}}</div>{{/if}}
-  </div>
-
-  <!-- ORNAMENT -->
-  <div class="orn">
-    <div class="orn-line"></div>
-    <div class="orn-d"><span></span><span></span><span></span></div>
-    <div class="orn-line"></div>
-  </div>
-
-  <!-- SECTION TITLE -->
-  <div class="sec-title">Orden del Culto</div>
-
-  <!-- TABLE -->
-  <div class="tbl">
-    {{#each assignments}}
-    <div class="row {{#if (eq (mod @index 2) 0)}}row-even{{else}}row-odd{{/if}}">
-      <div class="row-num">{{padId (addOne @index)}}</div>
-      <div class="row-role">{{roleName}}</div>
-      {{#if personName}}
-      <div class="row-person">{{personName}}</div>
-      {{else}}
-      <div class="row-empty">&mdash; &mdash; &mdash; &mdash; &mdash; &mdash; &mdash;</div>
-      {{/if}}
+    <div class="dt">
+      <div class="dt-date">{{formattedDate}}</div>
+      {{#if formattedTime}}<div class="dt-time">{{formattedTime}}</div>{{/if}}
     </div>
-    {{/each}}
+
+    <div class="orn">
+      <div class="orn-line"></div>
+      <div class="orn-d"><i></i><i></i><i></i></div>
+      <div class="orn-line"></div>
+    </div>
+
+    <div class="sec-title">Orden del Culto</div>
+
+    <div class="tbl">
+      {{#each assignments}}
+      <div class="row {{#if (eq (mod @index 2) 0)}}row-even{{else}}row-odd{{/if}}">
+        <div class="row-num">{{padId (addOne @index)}}</div>
+        <div class="row-role">{{roleName}}</div>
+        {{#if personName}}
+        <div class="row-person">{{personName}}</div>
+        {{else}}
+        <div class="row-empty">&mdash; &mdash; &mdash; &mdash; &mdash; &mdash; &mdash;</div>
+        {{/if}}
+      </div>
+      {{/each}}
+    </div>
+
+    {{#if verse}}
+    <div class="verse">
+      <p>{{verse}}</p>
+    </div>
+    {{/if}}
+
   </div>
 
-  <!-- VERSE -->
-  {{#if verse}}
-  <div class="verse">
-    <p>{{verse}}</p>
-  </div>
-  {{/if}}
-
-  <!-- FOOTER -->
+  <!-- ══════ FOOTER ══════ -->
   <div class="ftr">
     <span>{{churchNameUpper}}</span>
   </div>

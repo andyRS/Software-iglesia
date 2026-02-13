@@ -96,7 +96,7 @@ export class PdfService {
       const formattedDate = rawDate.charAt(0).toUpperCase() + rawDate.slice(1);
 
       // Formatear hora IGUAL que el frontend (formatTimeES con AM/PM)
-      const timeStr = (program as any).defaultTime || (program as any).programTime || "";
+      const timeStr = (program as any).programTime || (program as any).defaultTime || "";
       const ampm = (program as any).ampm || "AM";
       let formattedTime = "";
       if (timeStr) {
@@ -115,19 +115,40 @@ export class PdfService {
       const location = (program as any).location || "";
       const worshipType = (program as any).activityType?.name || "Culto";
 
-      // Logo: construir URL absoluta como file:// para que Puppeteer pueda cargarla
+      // Logo: embeber como base64 data URI para máxima compatibilidad con Puppeteer
       let logoUrl: string | null = null;
       const rawLogo = (program as any).logoUrl || church.logoUrl || null;
       if (rawLogo) {
         if (rawLogo.startsWith("http://") || rawLogo.startsWith("https://")) {
           logoUrl = rawLogo;
+        } else if (rawLogo.startsWith("data:")) {
+          logoUrl = rawLogo;
         } else {
-          // Ruta relativa — resolver como file:// absoluta para Puppeteer
-          const uploadsDir = path.join(__dirname, "..", "..", "..", "..", "uploads");
-          const logoFilename = rawLogo.replace(/^\/uploads\//, "").replace(/^\//, "");
-          const absPath = path.join(uploadsDir, logoFilename);
-          if (fs.existsSync(absPath)) {
-            logoUrl = `file://${absPath.replace(/\\/g, "/")}`;
+          const logoFilename = path.basename(rawLogo);
+          const searchDirs = [
+            path.join(process.cwd(), "uploads"),
+            path.join(__dirname, "..", "..", "..", "uploads"),
+            path.join(process.cwd(), "public"),
+          ];
+          const searchNames = [logoFilename, "logo.png"];
+
+          for (const dir of searchDirs) {
+            if (logoUrl) break;
+            for (const name of searchNames) {
+              const candidate = path.join(dir, name);
+              if (fs.existsSync(candidate)) {
+                // Leer archivo y convertir a base64 data URI
+                const fileBuffer = fs.readFileSync(candidate);
+                const ext = path.extname(name).toLowerCase().replace(".", "");
+                const mime = ext === "png" ? "image/png"
+                  : ext === "jpg" || ext === "jpeg" ? "image/jpeg"
+                  : ext === "svg" ? "image/svg+xml"
+                  : ext === "webp" ? "image/webp"
+                  : "image/png";
+                logoUrl = `data:${mime};base64,${fileBuffer.toString("base64")}`;
+                break;
+              }
+            }
           }
         }
       }
@@ -238,7 +259,7 @@ export class PdfService {
     const pdfBuffer = await page.pdf({
       format: "Letter",
       printBackground: true,
-      margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
+      margin: { top: "0", right: "0", bottom: "0", left: "0" },
     });
 
     await browser.close();
