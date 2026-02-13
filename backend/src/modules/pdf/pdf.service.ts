@@ -115,16 +115,16 @@ export class PdfService {
       const location = (program as any).location || "";
       const worshipType = (program as any).activityType?.name || "Culto";
 
-      // Logo: construir URL absoluta como file:// para que Puppeteer pueda cargarla
+      // Logo: embeber como base64 data URI para máxima compatibilidad con Puppeteer
       let logoUrl: string | null = null;
       const rawLogo = (program as any).logoUrl || church.logoUrl || null;
       if (rawLogo) {
         if (rawLogo.startsWith("http://") || rawLogo.startsWith("https://")) {
           logoUrl = rawLogo;
+        } else if (rawLogo.startsWith("data:")) {
+          logoUrl = rawLogo;
         } else {
-          // Extraer solo el nombre del archivo (sin /uploads/, /public/, etc)
           const logoFilename = path.basename(rawLogo);
-          // Buscar en múltiples directorios y con nombre exacto + "logo.png" como fallback
           const searchDirs = [
             path.join(process.cwd(), "uploads"),
             path.join(__dirname, "..", "..", "..", "uploads"),
@@ -137,7 +137,15 @@ export class PdfService {
             for (const name of searchNames) {
               const candidate = path.join(dir, name);
               if (fs.existsSync(candidate)) {
-                logoUrl = `file://${candidate.replace(/\\/g, "/")}`;
+                // Leer archivo y convertir a base64 data URI
+                const fileBuffer = fs.readFileSync(candidate);
+                const ext = path.extname(name).toLowerCase().replace(".", "");
+                const mime = ext === "png" ? "image/png"
+                  : ext === "jpg" || ext === "jpeg" ? "image/jpeg"
+                  : ext === "svg" ? "image/svg+xml"
+                  : ext === "webp" ? "image/webp"
+                  : "image/png";
+                logoUrl = `data:${mime};base64,${fileBuffer.toString("base64")}`;
                 break;
               }
             }
