@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { programsApi } from '../../lib/api'
+import { programsApi, churchesApi } from '../../lib/api'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
@@ -62,7 +62,10 @@ const F = {
 
 function formatDateES(dateStr: string): string {
   if (!dateStr) return ''
-  const d = new Date(dateStr + 'T12:00:00')
+  // programDate puede venir como ISO completo (2026-02-21T04:00:00.000Z) o solo fecha (2026-02-21)
+  const dateOnly = dateStr.slice(0, 10) // Extraer solo YYYY-MM-DD
+  const d = new Date(dateOnly + 'T12:00:00')
+  if (isNaN(d.getTime())) return dateStr // fallback si es inválida
   return d.toLocaleDateString('es-DO', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   }).replace(/^./, c => c.toUpperCase())
@@ -82,11 +85,11 @@ function formatTimeDisplay(prog: ProgramData): string {
 
 // ── Flyer Preview Component ─────────────────────────────────────────────────
 
-const FlyerMiniPreview = ({ prog }: { prog: ProgramData }) => {
-  const churchName = prog.church?.name || prog.churchName || 'Iglesia'
-  const churchSub = prog.church?.subTitle || prog.churchSub || ''
-  const location = prog.church?.location || prog.location || ''
-  const logoUrl = prog.logoUrl || prog.church?.logoUrl
+const FlyerMiniPreview = ({ prog, churchInfo }: { prog: ProgramData; churchInfo?: any }) => {
+  const churchName = prog.church?.name || prog.churchName || churchInfo?.name || 'Iglesia'
+  const churchSub = prog.church?.subTitle || prog.churchSub || churchInfo?.subTitle || ''
+  const location = prog.church?.location || prog.location || churchInfo?.address || ''
+  const logoUrl = prog.logoUrl || prog.church?.logoUrl || churchInfo?.logoUrl
   const logoSrc = logoUrl ? `/uploads/${logoUrl}` : '/uploads/logo.png'
 
   return (
@@ -196,6 +199,7 @@ const BatchReviewPage = () => {
   const ids = searchParams.get('ids')?.split(',').filter(Boolean) || []
 
   const [programs, setPrograms] = useState<ProgramData[]>([])
+  const [churchInfo, setChurchInfo] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [downloadingAll, setDownloadingAll] = useState(false)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
@@ -205,8 +209,16 @@ const BatchReviewPage = () => {
       setLoading(false)
       return
     }
-    Promise.all(ids.map(id => programsApi.get(id).then(r => r.data.data).catch(() => null)))
-      .then(results => setPrograms(results.filter(Boolean) as ProgramData[]))
+    Promise.all([
+      // Cargar todos los programas
+      Promise.all(ids.map(id => programsApi.get(id).then(r => r.data.data).catch(() => null))),
+      // Cargar info de la iglesia como fallback
+      churchesApi.getMine().then(r => r.data.data).catch(() => null),
+    ])
+      .then(([programResults, church]) => {
+        setPrograms(programResults.filter(Boolean) as ProgramData[])
+        if (church) setChurchInfo(church)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -337,7 +349,7 @@ const BatchReviewPage = () => {
               className="flex flex-col gap-3"
             >
               {/* Flyer preview */}
-              <FlyerMiniPreview prog={prog} />
+              <FlyerMiniPreview prog={prog} churchInfo={churchInfo} />
 
               {/* Action buttons */}
               <div className="flex gap-2">
