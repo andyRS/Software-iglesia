@@ -8,47 +8,48 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap"/>
 <style>
+  /* ═══════════════════════════════════════════════════
+     FLYER PROFESIONAL — Full-page Letter (8.5 × 11 in)
+     Optimizado para PDF via Puppeteer, sin bordes
+     redondeados en container (se cortan al imprimir).
+     ═══════════════════════════════════════════════════ */
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{
-    width:100%;height:100%;
+    width:100%;height:100%;margin:0;padding:0;
     font-family:'DM Sans',Helvetica,Arial,sans-serif;
     background:#fff;color:#1B2D5B;
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
   }
 
-  /* ═══════════════════════════════════════════
-     FULL-PAGE FLYER  —  Letter 8.5 × 11 in
-     ═══════════════════════════════════════════ */
   .page{
     width:100%;
-    min-height:100vh;
+    height:100vh;
     display:flex;
     flex-direction:column;
-    background:#fff;
+    overflow:hidden;
   }
 
-  /* ─── HEADER ─── */
+  /* ─── HEADER ─── edge-to-edge, sin border-radius */
   .hdr{
     background:linear-gradient(135deg,#1B2D5B 0%,#253E78 50%,#1B2D5B 100%);
-    padding:2.8rem 3rem 2rem;
+    padding:3rem 3.5rem 2.2rem;
     position:relative;
     overflow:hidden;
   }
-  /* decorative circles */
   .hdr::before{
-    content:'';position:absolute;top:-60px;right:-60px;
-    width:200px;height:200px;
+    content:'';position:absolute;top:-70px;right:-70px;
+    width:220px;height:220px;
     background:rgba(200,168,75,.07);border-radius:50%;
   }
   .hdr::after{
-    content:'';position:absolute;bottom:-30px;left:-40px;
-    width:140px;height:140px;
+    content:'';position:absolute;bottom:-40px;left:-50px;
+    width:160px;height:160px;
     background:rgba(200,168,75,.05);border-radius:50%;
   }
 
   .hdr-inner{
-    display:flex;align-items:center;gap:1.5rem;
+    display:flex;align-items:center;gap:1.8rem;
     position:relative;z-index:1;
   }
   .hdr-text{
@@ -57,44 +58,45 @@
   }
   .hdr-name{
     font-family:'Cormorant Garamond',Georgia,serif;
-    font-size:1.75rem;font-weight:700;color:#fff;
+    font-size:2rem;font-weight:700;color:#fff;
     line-height:1.15;letter-spacing:.03em;
   }
   .hdr-sub{
-    font-size:.85rem;color:#E8C96A;
-    letter-spacing:.06em;margin-top:6px;
+    font-size:.9rem;color:#E8C96A;
+    letter-spacing:.06em;margin-top:8px;
+    font-weight:500;
   }
   .hdr-loc{
-    font-size:.72rem;color:rgba(255,255,255,.45);margin-top:4px;
+    font-size:.75rem;color:rgba(255,255,255,.45);margin-top:5px;
   }
 
-  .logo{flex-shrink:0;width:68px;height:68px}
+  .logo{flex-shrink:0;width:74px;height:74px}
   .logo img{
-    width:68px;height:68px;border-radius:12px;
+    width:74px;height:74px;border-radius:12px;
     object-fit:contain;
     border:2.5px solid rgba(200,168,75,.45);
     background:rgba(255,255,255,.08);
   }
   .logo-fb{
-    width:68px;height:68px;border-radius:12px;
+    width:74px;height:74px;border-radius:12px;
     background:rgba(255,255,255,.08);
     border:2.5px solid rgba(200,168,75,.4);
     display:flex;align-items:center;justify-content:center;
-    font-size:2rem;color:rgba(255,255,255,.55);
+    font-size:2.2rem;color:rgba(255,255,255,.55);
   }
 
-  /* ─── GOLD BAND ─── */
+  /* ─── GOLD BAND ─── full-width shimmer */
   .gold{
-    height:5px;
+    height:5px;flex-shrink:0;
     background:linear-gradient(90deg,#B8963F,#E8C96A 30%,#F5DFA0 50%,#E8C96A 70%,#B8963F);
   }
 
-  /* ─── BODY CONTENT ─── */
+  /* ─── BODY ─── flex:1 fills remaining space */
   .body{
     flex:1;
     display:flex;flex-direction:column;
     align-items:center;
-    padding:1.8rem 2.5rem 1rem;
+    padding:2rem 3.5rem 1.2rem;
   }
 
   /* ─── BADGE ─── */
@@ -103,110 +105,111 @@
     background:linear-gradient(135deg,#C8A84B,#E0BE5A);
     color:#1B2D5B;
     font-family:'Cormorant Garamond',Georgia,serif;
-    font-size:1.15rem;font-weight:700;
-    padding:8px 32px;border-radius:30px;
+    font-size:1.2rem;font-weight:700;
+    padding:9px 36px;border-radius:30px;
     letter-spacing:.07em;text-transform:uppercase;
-    box-shadow:0 2px 8px rgba(200,168,75,.25);
-    margin-bottom:1rem;
+    margin-bottom:1.1rem;
   }
 
   /* ─── DATE / TIME ─── */
-  .dt{text-align:center;margin-bottom:.8rem}
+  .dt{text-align:center;margin-bottom:1rem}
   .dt-date{
     font-family:'Cormorant Garamond',Georgia,serif;
-    font-size:1.15rem;color:#1B2D5B;font-weight:600;
+    font-size:1.2rem;color:#1B2D5B;font-weight:600;
   }
-  .dt-time{font-size:.82rem;color:#6B7280;margin-top:3px}
+  .dt-time{font-size:.85rem;color:#6B7280;margin-top:4px}
 
   /* ─── ORNAMENT ─── */
   .orn{
     display:flex;align-items:center;gap:10px;
-    width:100%;max-width:420px;
-    margin:0 auto .8rem;
+    width:80%;max-width:440px;
+    margin:0 auto 1rem;
   }
-  .orn-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,#D1D5DB,transparent)}
-  .orn-d{display:flex;gap:5px}
+  .orn-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,#CBD5E1,transparent)}
+  .orn-d{display:flex;gap:6px}
   .orn-d i{
-    display:block;width:6px;height:6px;
+    display:block;width:7px;height:7px;
     background:#C8A84B;transform:rotate(45deg);
   }
-  .orn-d i:first-child,.orn-d i:last-child{opacity:.55}
+  .orn-d i:first-child,.orn-d i:last-child{opacity:.5}
   .orn-d i:nth-child(2){opacity:1}
 
   /* ─── SECTION TITLE ─── */
   .sec-title{
-    font-size:.7rem;font-weight:700;
-    letter-spacing:.18em;text-transform:uppercase;
-    color:#1B2D5B;margin-bottom:.9rem;
+    font-size:.72rem;font-weight:700;
+    letter-spacing:.2em;text-transform:uppercase;
+    color:#1B2D5B;margin-bottom:1rem;
   }
 
-  /* ─── TABLE ─── */
-  .tbl{width:100%;max-width:460px;margin-bottom:auto}
+  /* ─── TABLE ─── full width of body */
+  .tbl{
+    width:100%;
+    margin-bottom:auto;
+  }
 
   .row{
     display:flex;align-items:center;
-    padding:11px 14px;
+    padding:12px 16px;
     border-radius:8px;
-    margin-bottom:4px;
-    min-height:46px;
+    margin-bottom:5px;
+    min-height:50px;
   }
   .row-even{background:#F3F4F6}
   .row-odd{background:#fff;border:1px solid #EEF0F3}
 
   .row-num{
-    flex-shrink:0;width:26px;height:26px;
+    flex-shrink:0;width:28px;height:28px;
     background:#1B2D5B;color:#E8C96A;
     border-radius:6px;
-    font-size:.7rem;font-weight:700;
+    font-size:.72rem;font-weight:700;
     display:flex;align-items:center;justify-content:center;
-    margin-right:12px;
+    margin-right:14px;
   }
   .row-role{
-    flex-shrink:0;width:150px;
-    font-size:.85rem;font-weight:600;color:#1B2D5B;
+    flex-shrink:0;width:160px;
+    font-size:.88rem;font-weight:600;color:#1B2D5B;
   }
   .row-person{
     flex:1;
     font-family:'Cormorant Garamond',Georgia,serif;
-    font-size:1.05rem;font-weight:600;
+    font-size:1.1rem;font-weight:600;
     color:#111827;font-style:italic;
   }
   .row-empty{
     flex:1;color:#CBD5E1;
-    font-size:.8rem;letter-spacing:.04em;
+    font-size:.82rem;letter-spacing:.04em;
   }
 
   /* ─── VERSE ─── */
   .verse{
     text-align:center;
-    padding:1.2rem 2rem .6rem;
-    border-top:1px solid #F0F1F3;
-    margin-top:1.2rem;
-    width:100%;max-width:460px;
+    padding:1.4rem 2.5rem .8rem;
+    border-top:1px solid #EEF0F3;
+    margin-top:1.5rem;
+    width:100%;
   }
   .verse p{
     font-family:'Cormorant Garamond',Georgia,serif;
-    font-size:.95rem;font-style:italic;
-    color:#6B7280;line-height:1.55;margin:0;
+    font-size:1rem;font-style:italic;
+    color:#6B7280;line-height:1.6;margin:0;
   }
 
-  /* ─── FOOTER ─── */
+  /* ─── FOOTER ─── edge-to-edge, sticks to bottom */
   .ftr{
     background:linear-gradient(135deg,#1B2D5B 0%,#253E78 100%);
-    padding:14px 3rem;
+    padding:16px 3.5rem;
     text-align:center;
-    margin-top:auto;
+    flex-shrink:0;
   }
   .ftr span{
-    font-size:.72rem;font-weight:600;
+    font-size:.75rem;font-weight:600;
     color:rgba(255,255,255,.6);
-    letter-spacing:.1em;text-transform:uppercase;
+    letter-spacing:.12em;text-transform:uppercase;
   }
 
   @media print{
-    html,body{height:auto}
-    .page{min-height:auto}
-    .gold{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+    html,body{height:100%}
+    .page{height:100%}
   }
 </style>
 </head>
@@ -237,26 +240,21 @@
   <!-- ══════ BODY ══════ -->
   <div class="body">
 
-    <!-- Badge -->
     <div class="badge">{{worshipType}}</div>
 
-    <!-- Date & Time -->
     <div class="dt">
       <div class="dt-date">{{formattedDate}}</div>
       {{#if formattedTime}}<div class="dt-time">{{formattedTime}}</div>{{/if}}
     </div>
 
-    <!-- Ornament -->
     <div class="orn">
       <div class="orn-line"></div>
       <div class="orn-d"><i></i><i></i><i></i></div>
       <div class="orn-line"></div>
     </div>
 
-    <!-- Section Title -->
     <div class="sec-title">Orden del Culto</div>
 
-    <!-- Table -->
     <div class="tbl">
       {{#each assignments}}
       <div class="row {{#if (eq (mod @index 2) 0)}}row-even{{else}}row-odd{{/if}}">
@@ -271,7 +269,6 @@
       {{/each}}
     </div>
 
-    <!-- Verse -->
     {{#if verse}}
     <div class="verse">
       <p>{{verse}}</p>
