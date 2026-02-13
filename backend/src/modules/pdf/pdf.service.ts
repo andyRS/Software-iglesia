@@ -122,12 +122,19 @@ export class PdfService {
         if (rawLogo.startsWith("http://") || rawLogo.startsWith("https://")) {
           logoUrl = rawLogo;
         } else {
-          // Ruta relativa — resolver como file:// absoluta para Puppeteer
-          const uploadsDir = path.join(__dirname, "..", "..", "..", "..", "uploads");
+          // Ruta relativa — buscar en múltiples ubicaciones posibles
           const logoFilename = rawLogo.replace(/^\/uploads\//, "").replace(/^\//, "");
-          const absPath = path.join(uploadsDir, logoFilename);
-          if (fs.existsSync(absPath)) {
-            logoUrl = `file://${absPath.replace(/\\/g, "/")}`;
+          const candidates = [
+            path.join(process.cwd(), "uploads", logoFilename),                    // backend/uploads/
+            path.join(__dirname, "..", "..", "..", "uploads", logoFilename),        // desde src/modules/pdf → backend/uploads/
+            path.join(__dirname, "..", "..", "..", "..", "uploads", logoFilename),  // raiz del proyecto/uploads/
+            path.join(process.cwd(), "public", logoFilename),                     // backend/public/
+          ];
+          for (const candidate of candidates) {
+            if (fs.existsSync(candidate)) {
+              logoUrl = `file://${candidate.replace(/\\/g, "/")}`;
+              break;
+            }
           }
         }
       }
