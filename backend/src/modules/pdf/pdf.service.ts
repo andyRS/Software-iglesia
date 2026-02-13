@@ -74,7 +74,7 @@ export class PdfService {
       // --- FLYER DATA - IDÉNTICO AL PREVIEW DEL FRONTEND ---
       const assignments = (program.assignments || []).map(
         (a: any, idx: number) => ({
-          id: a.id || a.sectionOrder || idx + 1,
+          id: a.sectionOrder || idx + 1,
           roleName: a.roleName || a.sectionName || "Sin rol",
           personName: a.person?.name || a.person?.fullName || "",
         }),
