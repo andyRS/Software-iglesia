@@ -1,7 +1,21 @@
 import { useState, useEffect } from 'react'
 import { churchesApi, rolesApi } from '../lib/api'
 import { toast } from 'sonner'
-import { Loader2, Save, Plus, Trash2, X } from 'lucide-react'
+import { Loader2, Save, Plus, Trash2, Settings } from 'lucide-react'
+import { motion } from 'framer-motion'
+
+import { Button } from '../components/ui/button'
+import { Badge } from '../components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../components/ui/dialog'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
 
 const SettingsPage = () => {
   const [church, setChurch] = useState<any>(null)
@@ -12,7 +26,9 @@ const SettingsPage = () => {
   const [roleForm, setRoleForm] = useState({ name: '', description: '', color: '#3B82F6', requiresSkill: false })
   const [savingRole, setSavingRole] = useState(false)
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+  }, [])
 
   const load = async () => {
     setLoading(true)
@@ -26,108 +42,320 @@ const SettingsPage = () => {
 
   const saveChurch = async () => {
     setSaving(true)
-    try { await churchesApi.updateMine(church); toast.success('Iglesia actualizada') } catch { toast.error('Error') }
+    try {
+      await churchesApi.updateMine(church)
+      toast.success('Iglesia actualizada')
+    } catch {
+      toast.error('Error al guardar')
+    }
     setSaving(false)
   }
 
   const addRole = async () => {
     if (!roleForm.name.trim()) return toast.error('Nombre requerido')
     setSavingRole(true)
-    try { await rolesApi.create(roleForm); toast.success('Rol creado'); setShowRoleModal(false); load() } catch (e: any) { toast.error(e.response?.data?.message || 'Error') }
+    try {
+      await rolesApi.create(roleForm)
+      toast.success('Rol creado')
+      setShowRoleModal(false)
+      load()
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Error')
+    }
     setSavingRole(false)
   }
 
   const deleteRole = async (id: string, name: string) => {
     if (!confirm(`¿Eliminar rol "${name}"?`)) return
-    try { await rolesApi.delete(id); toast.success('Eliminado'); load() } catch { toast.error('Error') }
+    try {
+      await rolesApi.delete(id)
+      toast.success('Eliminado')
+      load()
+    } catch {
+      toast.error('Error')
+    }
   }
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary-600" /></div>
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
-
-      {church && (
-        <div className="card">
-          <h3 className="font-semibold mb-4 text-gray-900">Información de la Iglesia</h3>
-          <div className="space-y-4">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label><input type="text" value={church.name} onChange={e => setChurch({ ...church, name: e.target.value })} className="input" /></div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Logo de la Iglesia</label>
-              <div className="flex items-center gap-4">
-                {church.logoUrl && (
-                  <img
-                    src={church.logoUrl.startsWith('/uploads/')
-                      ? church.logoUrl
-                      : church.logoUrl}
-                    alt="Logo"
-                    className="w-16 h-16 object-contain border rounded"
-                  />
-                )}
-                <input type="file" accept="image/*" onChange={async e => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  try {
-                    const res = await churchesApi.uploadLogo(file);
-                    setChurch(res.data.data);
-                    toast.success('Logo actualizado');
-                  } catch { toast.error('Error al subir logo'); }
-                }} />
-              </div>
-            </div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label><input type="text" value={church.address?.street || ''} onChange={e => setChurch({ ...church, address: { ...church.address, street: e.target.value } })} className="input" /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Ciudad</label><input type="text" value={church.address?.city || ''} onChange={e => setChurch({ ...church, address: { ...church.address, city: e.target.value } })} className="input" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label><input type="text" value={church.phone || ''} onChange={e => setChurch({ ...church, phone: e.target.value })} className="input" /></div>
-            </div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Semanas de Rotación</label><input type="number" min="2" max="12" value={church.settings?.rotationWeeks || 4} onChange={e => setChurch({ ...church, settings: { ...church.settings, rotationWeeks: Number(e.target.value) } })} className="input w-32" /></div>
-            <button onClick={saveChurch} disabled={saving} className="btn btn-primary flex items-center gap-2">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Guardar</button>
-          </div>
-        </div>
-      )}
-
-      <div className="card">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-semibold text-gray-900">Roles Disponibles</h3>
-          <button onClick={() => { setRoleForm({ name: '', description: '', color: '#3B82F6', requiresSkill: false }); setShowRoleModal(true) }} className="text-sm text-primary-600 font-medium flex items-center gap-1"><Plus className="w-4 h-4" /> Nuevo Rol</button>
-        </div>
-        <div className="space-y-2">
-          {roles.map(r => (
-            <div key={r._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded" style={{ backgroundColor: r.color }} />
-                <div><p className="font-medium text-sm text-gray-900">{r.name}</p>{r.description && <p className="text-xs text-gray-500">{r.description}</p>}</div>
-              </div>
-              <div className="flex items-center gap-2">
-                {r.requiresSkill && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Requiere habilidad</span>}
-                <button onClick={() => deleteRole(r._id, r.name)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-400" /></button>
-              </div>
-            </div>
-          ))}
-        </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-3xl mx-auto space-y-6"
+    >
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-neutral-900">Configuración</h1>
+        <p className="text-neutral-600 mt-1">
+          Administra la información de tu iglesia y los roles disponibles
+        </p>
       </div>
 
-      {showRoleModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-            <div className="flex justify-between items-center p-6 border-b"><h2 className="text-lg font-bold">Nuevo Rol</h2><button onClick={() => setShowRoleModal(false)}><X className="w-5 h-5" /></button></div>
-            <div className="p-6 space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label><input type="text" value={roleForm.name} onChange={e => setRoleForm({ ...roleForm, name: e.target.value })} className="input" placeholder="Ej: Adoración" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label><input type="text" value={roleForm.description} onChange={e => setRoleForm({ ...roleForm, description: e.target.value })} className="input" /></div>
-              <div className="flex items-center gap-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Color</label><input type="color" value={roleForm.color} onChange={e => setRoleForm({ ...roleForm, color: e.target.value })} className="w-12 h-10 rounded" /></div>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={roleForm.requiresSkill} onChange={e => setRoleForm({ ...roleForm, requiresSkill: e.target.checked })} /><span className="text-sm text-gray-700">Requiere habilidad especial</span></label>
+      {/* Church Info */}
+      {church && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Información de la Iglesia</CardTitle>
+              <CardDescription>Datos generales de tu congregación</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="churchName">Nombre</Label>
+                <Input
+                  id="churchName"
+                  value={church.name}
+                  onChange={(e) => setChurch({ ...church, name: e.target.value })}
+                />
               </div>
+
+              <div className="space-y-2">
+                <Label>Logo de la Iglesia</Label>
+                <div className="flex items-center gap-4">
+                  {church.logoUrl && (
+                    <img
+                      src={church.logoUrl}
+                      alt="Logo"
+                      className="w-16 h-16 object-contain border border-neutral-200 rounded-lg"
+                    />
+                  )}
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className="flex-1"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      try {
+                        const res = await churchesApi.uploadLogo(file)
+                        setChurch(res.data.data)
+                        toast.success('Logo actualizado')
+                      } catch {
+                        toast.error('Error al subir logo')
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="churchAddress">Dirección</Label>
+                <Input
+                  id="churchAddress"
+                  value={church.address?.street || ''}
+                  onChange={(e) => setChurch({ ...church, address: { ...church.address, street: e.target.value } })}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="churchCity">Ciudad</Label>
+                  <Input
+                    id="churchCity"
+                    value={church.address?.city || ''}
+                    onChange={(e) => setChurch({ ...church, address: { ...church.address, city: e.target.value } })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="churchPhone">Teléfono</Label>
+                  <Input
+                    id="churchPhone"
+                    value={church.phone || ''}
+                    onChange={(e) => setChurch({ ...church, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="rotationWeeks">Semanas de Rotación</Label>
+                <Input
+                  id="rotationWeeks"
+                  type="number"
+                  min="2"
+                  max="12"
+                  value={church.settings?.rotationWeeks || 4}
+                  onChange={(e) => setChurch({ ...church, settings: { ...church.settings, rotationWeeks: Number(e.target.value) } })}
+                  className="w-32"
+                />
+              </div>
+
+              <Button onClick={saveChurch} disabled={saving}>
+                {saving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Guardar
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Roles */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Roles Disponibles</CardTitle>
+                <CardDescription>
+                  Roles que se pueden asignar a las personas
+                  {roles.length > 0 && ` (${roles.length})`}
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setRoleForm({ name: '', description: '', color: '#3B82F6', requiresSkill: false })
+                  setShowRoleModal(true)
+                }}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Nuevo Rol
+              </Button>
             </div>
-            <div className="flex justify-end gap-3 p-6 border-t">
-              <button onClick={() => setShowRoleModal(false)} className="btn btn-secondary">Cancelar</button>
-              <button onClick={addRole} disabled={savingRole} className="btn btn-primary">{savingRole ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Crear'}</button>
+          </CardHeader>
+          <CardContent>
+            {roles.length === 0 ? (
+              <div className="text-center py-8">
+                <Settings className="w-10 h-10 mx-auto mb-3 text-neutral-300" />
+                <p className="text-neutral-500 text-sm">No hay roles configurados</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 text-primary-600"
+                  onClick={() => {
+                    setRoleForm({ name: '', description: '', color: '#3B82F6', requiresSkill: false })
+                    setShowRoleModal(true)
+                  }}
+                >
+                  Crear primer rol
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {roles.map((r) => (
+                  <div
+                    key={r._id}
+                    className="flex items-center justify-between p-3 bg-neutral-50 border border-neutral-200 rounded-lg hover:bg-neutral-100/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-4 h-4 rounded-full border border-neutral-200"
+                        style={{ backgroundColor: r.color }}
+                      />
+                      <div>
+                        <p className="font-medium text-sm text-neutral-900">{r.name}</p>
+                        {r.description && (
+                          <p className="text-xs text-neutral-500">{r.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {r.requiresSkill && (
+                        <Badge variant="secondary" className="text-xs">
+                          Requiere habilidad
+                        </Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteRole(r._id, r.name)}
+                        className="h-8 w-8 p-0 text-neutral-400 hover:text-danger-600"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Role Modal */}
+      <Dialog open={showRoleModal} onOpenChange={setShowRoleModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nuevo Rol</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="roleName">Nombre *</Label>
+              <Input
+                id="roleName"
+                value={roleForm.name}
+                onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })}
+                placeholder="Ej: Adoración"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="roleDesc">Descripción</Label>
+              <Input
+                id="roleDesc"
+                value={roleForm.description}
+                onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })}
+                placeholder="Breve descripción del rol"
+              />
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="roleColor">Color</Label>
+                <Input
+                  id="roleColor"
+                  type="color"
+                  value={roleForm.color}
+                  onChange={(e) => setRoleForm({ ...roleForm, color: e.target.value })}
+                  className="w-12 h-10 p-1 cursor-pointer"
+                />
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer mt-6">
+                <input
+                  type="checkbox"
+                  checked={roleForm.requiresSkill}
+                  onChange={(e) => setRoleForm({ ...roleForm, requiresSkill: e.target.checked })}
+                  className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-sm text-neutral-700">Requiere habilidad especial</span>
+              </label>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRoleModal(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={addRole} disabled={savingRole}>
+              {savingRole && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Crear
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </motion.div>
   )
 }
+
 export default SettingsPage

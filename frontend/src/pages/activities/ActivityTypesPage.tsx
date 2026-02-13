@@ -1,10 +1,41 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, X, Loader2, Calendar } from 'lucide-react'
+import { Plus, Edit, Trash2, Loader2, Calendar, Clock, Users, X } from 'lucide-react'
 import { activitiesApi, rolesApi } from '../../lib/api'
 import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'framer-motion'
+
+import { Button } from '../../components/ui/button'
+import { Badge } from '../../components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
+import { EmptyState } from '../../components/ui/empty-state'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../components/ui/dialog'
+import { Input } from '../../components/ui/input'
+import { Label } from '../../components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select'
 
 const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
-const DAY_COLORS = ['bg-red-50 border-red-200', 'bg-gray-50 border-gray-200', 'bg-blue-50 border-blue-200', 'bg-green-50 border-green-200', 'bg-yellow-50 border-yellow-200', 'bg-pink-50 border-pink-200', 'bg-purple-50 border-purple-200']
+
+const DAY_COLORS: Record<number, { bg: string; border: string; badge: string }> = {
+  0: { bg: 'bg-red-50/50', border: 'border-red-200', badge: 'bg-red-100 text-red-700' },
+  1: { bg: 'bg-neutral-50/50', border: 'border-neutral-200', badge: 'bg-neutral-100 text-neutral-700' },
+  2: { bg: 'bg-blue-50/50', border: 'border-blue-200', badge: 'bg-blue-100 text-blue-700' },
+  3: { bg: 'bg-green-50/50', border: 'border-green-200', badge: 'bg-green-100 text-green-700' },
+  4: { bg: 'bg-yellow-50/50', border: 'border-yellow-200', badge: 'bg-yellow-100 text-yellow-700' },
+  5: { bg: 'bg-pink-50/50', border: 'border-pink-200', badge: 'bg-pink-100 text-pink-700' },
+  6: { bg: 'bg-purple-50/50', border: 'border-purple-200', badge: 'bg-purple-100 text-purple-700' },
+}
 
 const ActivityTypesPage = () => {
   const [activities, setActivities] = useState<any[]>([])
@@ -13,7 +44,13 @@ const ActivityTypesPage = () => {
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', description: '', dayOfWeek: 0, defaultTime: '10:00', roleConfig: [] as any[] })
+  const [form, setForm] = useState({
+    name: '',
+    description: '',
+    dayOfWeek: 0,
+    defaultTime: '10:00',
+    roleConfig: [] as any[],
+  })
 
   const load = async () => {
     setLoading(true)
@@ -21,11 +58,15 @@ const ActivityTypesPage = () => {
       const [aRes, rRes] = await Promise.all([activitiesApi.getAll(), rolesApi.getAll()])
       setActivities(aRes.data.data)
       setRoles(rRes.data.data)
-    } catch { toast.error('Error cargando datos') }
+    } catch {
+      toast.error('Error cargando datos')
+    }
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+  }, [])
 
   const openNew = () => {
     setEditing(null)
@@ -35,19 +76,43 @@ const ActivityTypesPage = () => {
 
   const openEdit = (a: any) => {
     setEditing(a)
-    setForm({ name: a.name, description: a.description || '', dayOfWeek: a.dayOfWeek, defaultTime: a.defaultTime, roleConfig: a.roleConfig.map((rc: any) => ({ ...rc })) })
+    setForm({
+      name: a.name,
+      description: a.description || '',
+      dayOfWeek: a.dayOfWeek,
+      defaultTime: a.defaultTime,
+      roleConfig: a.roleConfig.map((rc: any) => ({ ...rc })),
+    })
     setShowModal(true)
   }
 
   const addRoleConfig = () => {
-    if (roles.length === 0) return toast.error('Primero crea roles')
-    setForm(f => ({ ...f, roleConfig: [...f.roleConfig, { sectionName: '', sectionOrder: f.roleConfig.length + 1, role: { id: roles[0]._id, name: roles[0].name }, peopleNeeded: 1, isRequired: true }] }))
+    if (roles.length === 0) return toast.error('Primero crea roles en Configuración')
+    setForm((f) => ({
+      ...f,
+      roleConfig: [
+        ...f.roleConfig,
+        {
+          sectionName: '',
+          sectionOrder: f.roleConfig.length + 1,
+          role: { id: roles[0]._id, name: roles[0].name },
+          peopleNeeded: 1,
+          isRequired: true,
+        },
+      ],
+    }))
   }
 
-  const removeRoleConfig = (idx: number) => setForm(f => ({ ...f, roleConfig: f.roleConfig.filter((_, i) => i !== idx).map((rc, i) => ({ ...rc, sectionOrder: i + 1 })) }))
+  const removeRoleConfig = (idx: number) =>
+    setForm((f) => ({
+      ...f,
+      roleConfig: f.roleConfig
+        .filter((_, i) => i !== idx)
+        .map((rc, i) => ({ ...rc, sectionOrder: i + 1 })),
+    }))
 
   const updateRoleConfig = (idx: number, field: string, value: any) => {
-    setForm(f => {
+    setForm((f) => {
       const updated = [...f.roleConfig]
       if (field === 'roleId') {
         const r = roles.find((rl: any) => rl._id === value)
@@ -61,108 +126,327 @@ const ActivityTypesPage = () => {
 
   const handleSave = async () => {
     if (!form.name.trim()) return toast.error('El nombre es requerido')
-    if (form.roleConfig.length === 0) return toast.error('Agrega al menos un rol')
-    if (form.roleConfig.some(rc => !rc.sectionName.trim())) return toast.error('Cada sección necesita un nombre')
+    if (form.roleConfig.length === 0) return toast.error('Agrega al menos una sección')
+    if (form.roleConfig.some((rc) => !rc.sectionName.trim()))
+      return toast.error('Cada sección necesita un nombre')
+
     setSaving(true)
     try {
-      if (editing) { await activitiesApi.update(editing._id, form); toast.success('Actividad actualizada') }
-      else { await activitiesApi.create(form); toast.success('Actividad creada') }
-      setShowModal(false); load()
-    } catch (e: any) { toast.error(e.response?.data?.message || 'Error al guardar') }
+      if (editing) {
+        await activitiesApi.update(editing._id, form)
+        toast.success('Actividad actualizada')
+      } else {
+        await activitiesApi.create(form)
+        toast.success('Actividad creada')
+      }
+      setShowModal(false)
+      load()
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Error al guardar')
+    }
     setSaving(false)
   }
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`¿Eliminar "${name}"?`)) return
-    try { await activitiesApi.delete(id); toast.success('Eliminada'); load() } catch { toast.error('Error') }
+    try {
+      await activitiesApi.delete(id)
+      toast.success('Actividad eliminada')
+      load()
+    } catch {
+      toast.error('Error al eliminar')
+    }
   }
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary-600" /></div>
-
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tipos de Actividades</h1>
-          <p className="text-gray-600 mt-1">Configura los servicios semanales y sus roles de oportunidades</p>
+          <h1 className="text-3xl font-bold text-neutral-900">Tipos de Actividades</h1>
+          <p className="text-neutral-600 mt-1">
+            Configura los servicios semanales y sus roles de oportunidades
+            {activities.length > 0 && (
+              <span className="ml-1 text-neutral-500">({activities.length})</span>
+            )}
+          </p>
         </div>
-        <button onClick={openNew} className="btn btn-primary flex items-center gap-2"><Plus className="w-5 h-5" /> Nueva Actividad</button>
+        <Button onClick={openNew} size="lg">
+          <Plus className="w-5 h-5 mr-2" />
+          Nueva Actividad
+        </Button>
       </div>
 
-      {activities.length === 0 ? (
-        <div className="card text-center py-12 text-gray-500"><Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" /><p>No hay actividades configuradas</p><button onClick={openNew} className="text-primary-600 text-sm mt-2">Crear primera actividad →</button></div>
+      {/* Content */}
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+        </div>
+      ) : activities.length === 0 ? (
+        <Card>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={Calendar}
+              title="No hay actividades configuradas"
+              description="Crea tipos de actividades como cultos, estudios bíblicos o reuniones para organizar los programas semanales."
+              action={{
+                label: 'Crear primera actividad',
+                onClick: openNew,
+                icon: Plus,
+              }}
+            />
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {activities.map(a => (
-            <div key={a._id} className={`card border-2 ${DAY_COLORS[a.dayOfWeek]}`}>
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-bold text-gray-900 text-lg">{a.name}</h3>
-                  <p className="text-sm text-gray-600">{DAYS[a.dayOfWeek]} a las {a.defaultTime}</p>
-                  {a.description && <p className="text-sm text-gray-500 mt-1">{a.description}</p>}
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => openEdit(a)} className="p-1.5 hover:bg-white/50 rounded"><Edit className="w-4 h-4 text-gray-500" /></button>
-                  <button onClick={() => handleDelete(a._id, a.name)} className="p-1.5 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-400" /></button>
-                </div>
-              </div>
-              <div className="border-t pt-3">
-                <p className="text-xs text-gray-500 mb-2 font-medium">FORMATO DEL PROGRAMA:</p>
-                <div className="space-y-1">
-                  {a.roleConfig.map((rc: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-700">{rc.sectionOrder}. {rc.sectionName}</span>
-                      <span className="text-xs text-gray-400">{rc.role.name} ({rc.peopleNeeded}p)</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
+          <AnimatePresence>
+            {activities.map((a, index) => {
+              const colors = DAY_COLORS[a.dayOfWeek] || DAY_COLORS[1]
+              const totalPeople = a.roleConfig.reduce((sum: number, rc: any) => sum + (rc.peopleNeeded || 1), 0)
+
+              return (
+                <motion.div
+                  key={a._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <Card className={`border-2 ${colors.border} ${colors.bg} hover:shadow-md transition-shadow`}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1 flex-1">
+                          <CardTitle className="text-lg">{a.name}</CardTitle>
+                          <div className="flex items-center gap-3 text-sm text-neutral-600">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colors.badge}`}>
+                              {DAYS[a.dayOfWeek]}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5" />
+                              {a.defaultTime}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Users className="w-3.5 h-3.5" />
+                              {totalPeople} persona{totalPeople !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          {a.description && (
+                            <p className="text-sm text-neutral-500 mt-1">{a.description}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-1 ml-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(a)}
+                            className="h-8 w-8 p-0 text-neutral-500 hover:text-primary-600"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(a._id, a.name)}
+                            className="h-8 w-8 p-0 text-neutral-500 hover:text-danger-600"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="border-t border-neutral-200/60 pt-3">
+                        <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
+                          Formato del Programa
+                        </p>
+                        <div className="space-y-1.5">
+                          {a.roleConfig.map((rc: any, i: number) => (
+                            <div
+                              key={i}
+                              className="flex items-center justify-between text-sm py-1 px-2 rounded-md hover:bg-white/60 transition-colors"
+                            >
+                              <span className="text-neutral-700">
+                                <span className="font-medium text-neutral-400 mr-1.5">{rc.sectionOrder}.</span>
+                                {rc.sectionName}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-xs font-normal">
+                                  {rc.role.name}
+                                </Badge>
+                                <span className="text-xs text-neutral-400">
+                                  {rc.peopleNeeded}p
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
         </div>
       )}
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b"><h2 className="text-xl font-bold">{editing ? 'Editar' : 'Nueva'} Actividad</h2><button onClick={() => setShowModal(false)}><X className="w-5 h-5" /></button></div>
-            <div className="p-6 space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label><input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="input" placeholder="Culto Dominical, Estudio Bíblico..." /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label><input type="text" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="input" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Día de la Semana *</label><select value={form.dayOfWeek} onChange={e => setForm({ ...form, dayOfWeek: Number(e.target.value) })} className="input">{DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}</select></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Hora</label><input type="time" value={form.defaultTime} onChange={e => setForm({ ...form, defaultTime: e.target.value })} className="input" /></div>
-              </div>
+      {/* Modal */}
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editing ? 'Editar' : 'Nueva'} Actividad</DialogTitle>
+          </DialogHeader>
 
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <label className="text-sm font-medium text-gray-700">Secciones del Programa (Roles)</label>
-                  <button type="button" onClick={addRoleConfig} className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"><Plus className="w-4 h-4" /> Agregar Sección</button>
-                </div>
-                {form.roleConfig.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Agrega las secciones del programa (Dirección, Adoración, Devocional, etc.)</p>}
-                <div className="space-y-3">
-                  {form.roleConfig.map((rc, idx) => (
-                    <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm font-bold text-gray-400 w-6">{idx + 1}.</span>
-                      <input type="text" placeholder="Nombre de sección (ej: Adoración)" value={rc.sectionName} onChange={e => updateRoleConfig(idx, 'sectionName', e.target.value)} className="input flex-1" />
-                      <select value={rc.role.id} onChange={e => updateRoleConfig(idx, 'roleId', e.target.value)} className="input w-40">
-                        {roles.map((r: any) => <option key={r._id} value={r._id}>{r.name}</option>)}
-                      </select>
-                      <input type="number" min="1" max="5" value={rc.peopleNeeded} onChange={e => updateRoleConfig(idx, 'peopleNeeded', Number(e.target.value))} className="input w-16 text-center" />
-                      <button onClick={() => removeRoleConfig(idx)} className="p-1 hover:bg-red-50 rounded"><X className="w-4 h-4 text-red-400" /></button>
-                    </div>
-                  ))}
-                </div>
+          <div className="space-y-4 py-4">
+            {/* Nombre */}
+            <div className="space-y-2">
+              <Label htmlFor="actName">Nombre *</Label>
+              <Input
+                id="actName"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Culto Dominical, Estudio Bíblico..."
+              />
+            </div>
+
+            {/* Descripción */}
+            <div className="space-y-2">
+              <Label htmlFor="actDesc">Descripción</Label>
+              <Input
+                id="actDesc"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Breve descripción de la actividad"
+              />
+            </div>
+
+            {/* Día y Hora */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Día de la Semana *</Label>
+                <Select
+                  value={String(form.dayOfWeek)}
+                  onValueChange={(value) => setForm({ ...form, dayOfWeek: Number(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DAYS.map((d, i) => (
+                      <SelectItem key={i} value={String(i)}>
+                        {d}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="actTime">Hora</Label>
+                <Input
+                  id="actTime"
+                  type="time"
+                  value={form.defaultTime}
+                  onChange={(e) => setForm({ ...form, defaultTime: e.target.value })}
+                />
               </div>
             </div>
-            <div className="flex justify-end gap-3 p-6 border-t">
-              <button onClick={() => setShowModal(false)} className="btn btn-secondary">Cancelar</button>
-              <button onClick={handleSave} disabled={saving} className="btn btn-primary flex items-center gap-2">{saving && <Loader2 className="w-4 h-4 animate-spin" />}{editing ? 'Actualizar' : 'Crear'}</button>
+
+            {/* Secciones del Programa */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Secciones del Programa</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={addRoleConfig}
+                  className="text-primary-600 hover:text-primary-700"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Agregar Sección
+                </Button>
+              </div>
+
+              {form.roleConfig.length === 0 && (
+                <div className="text-center py-6 border border-dashed border-neutral-300 rounded-lg bg-neutral-50/50">
+                  <p className="text-sm text-neutral-400">
+                    Agrega las secciones del programa
+                  </p>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    (Dirección, Adoración, Devocional, etc.)
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {form.roleConfig.map((rc, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 p-3 bg-neutral-50 border border-neutral-200 rounded-lg"
+                  >
+                    <span className="text-sm font-bold text-neutral-400 w-6 text-center shrink-0">
+                      {idx + 1}.
+                    </span>
+                    <Input
+                      placeholder="Nombre de sección"
+                      value={rc.sectionName}
+                      onChange={(e) => updateRoleConfig(idx, 'sectionName', e.target.value)}
+                      className="flex-1"
+                    />
+                    <Select
+                      value={rc.role.id}
+                      onValueChange={(value) => updateRoleConfig(idx, 'roleId', value)}
+                    >
+                      <SelectTrigger className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roles.map((r: any) => (
+                          <SelectItem key={r._id} value={r._id}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="5"
+                      value={rc.peopleNeeded}
+                      onChange={(e) => updateRoleConfig(idx, 'peopleNeeded', Number(e.target.value))}
+                      className="w-16 text-center"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeRoleConfig(idx)}
+                      className="h-8 w-8 p-0 text-neutral-400 hover:text-danger-600 shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowModal(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {editing ? 'Actualizar' : 'Crear'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </motion.div>
   )
 }
+
 export default ActivityTypesPage

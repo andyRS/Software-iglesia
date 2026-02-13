@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Loader2, MoreHorizontal } from 'lucide-react'
+import { Plus, Edit, Trash2, Loader2, MoreHorizontal, Users } from 'lucide-react'
 import { ColumnDef } from '@tanstack/react-table'
 import { personsApi, rolesApi, ministriesApi } from '../../lib/api'
 import { toast } from 'react-hot-toast'
@@ -9,6 +9,8 @@ import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { DataTable } from '../../components/ui/data-table'
 import { Avatar, AvatarFallback } from '../../components/ui/avatar'
+import { Card, CardContent } from '../../components/ui/card'
+import { EmptyState } from '../../components/ui/empty-state'
 import {
   Dialog,
   DialogContent,
@@ -50,7 +52,7 @@ interface Person {
   roles: Array<{ roleId: string; roleName: string }>
 }
 
-const PersonsPageImproved = () => {
+const PersonsPage = () => {
   const [persons, setPersons] = useState<Person[]>([])
   const [roles, setRoles] = useState<any[]>([])
   const [ministries, setMinistries] = useState<string[]>([])
@@ -58,7 +60,6 @@ const PersonsPageImproved = () => {
   const [showModal, setShowModal] = useState(false)
   const [editingPerson, setEditingPerson] = useState<Person | null>(null)
   const [saving, setSaving] = useState(false)
-  // Pagination state
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [total, setTotal] = useState(0)
@@ -81,11 +82,16 @@ const PersonsPageImproved = () => {
         return (
           <div className="flex items-center gap-3">
             <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-primary-100 text-primary-700">
-                {person.fullName.charAt(0)}
+              <AvatarFallback className="bg-primary-100 text-primary-700 font-semibold">
+                {person.fullName.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <span className="font-medium text-neutral-900">{person.fullName}</span>
+            <div>
+              <span className="font-medium text-neutral-900">{person.fullName}</span>
+              {person.email && (
+                <p className="text-xs text-neutral-500">{person.email}</p>
+              )}
+            </div>
           </div>
         )
       },
@@ -100,25 +106,33 @@ const PersonsPageImproved = () => {
     {
       accessorKey: 'ministry',
       header: 'Ministerio',
-      cell: ({ row }) => (
-        <span className="text-neutral-600">{row.original.ministry || '—'}</span>
-      ),
+      cell: ({ row }) => {
+        const ministry = row.original.ministry
+        return ministry ? (
+          <Badge variant="outline" className="font-normal">
+            {ministry}
+          </Badge>
+        ) : (
+          <span className="text-neutral-400">—</span>
+        )
+      },
     },
     {
       accessorKey: 'roles',
       header: 'Roles',
       cell: ({ row }) => {
-        const roles = row.original.roles
+        const personRoles = row.original.roles
+        if (!personRoles.length) return <span className="text-neutral-400">—</span>
         return (
           <div className="flex flex-wrap gap-1">
-            {roles.slice(0, 2).map((role, i) => (
+            {personRoles.slice(0, 2).map((role, i) => (
               <Badge key={i} variant="secondary" className="text-xs">
                 {role.roleName}
               </Badge>
             ))}
-            {roles.length > 2 && (
+            {personRoles.length > 2 && (
               <Badge variant="outline" className="text-xs">
-                +{roles.length - 2}
+                +{personRoles.length - 2}
               </Badge>
             )}
           </div>
@@ -140,7 +154,7 @@ const PersonsPageImproved = () => {
     },
     {
       id: 'actions',
-      header: 'Acciones',
+      header: '',
       cell: ({ row }) => {
         const person = row.original
         return (
@@ -187,15 +201,8 @@ const PersonsPageImproved = () => {
     setLoading(false)
   }
 
-  // Only load on mount if not already loaded by page/pageSize effect
-  useEffect(() => {
-    // Do nothing, handled by page/pageSize effect
-  }, [])
-
-  // Refetch when page or pageSize changes
   useEffect(() => {
     load(page, pageSize)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize])
 
   const openNew = () => {
@@ -280,13 +287,17 @@ const PersonsPageImproved = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      className="space-y-6"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-neutral-900">Personas</h1>
           <p className="text-neutral-600 mt-1">
-            Gestiona los participantes y sus roles ({persons.length})
+            Gestiona los participantes y sus roles
+            {total > 0 && (
+              <span className="ml-1 text-neutral-500">({total})</span>
+            )}
           </p>
         </div>
         <Button onClick={openNew} size="lg">
@@ -295,24 +306,49 @@ const PersonsPageImproved = () => {
         </Button>
       </div>
 
-      {/* DataTable */}
+      {/* Content */}
       {loading ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-16">
           <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
         </div>
+      ) : persons.length === 0 && page === 1 ? (
+        <Card>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={Users}
+              title="No hay personas registradas"
+              description="Agrega participantes para empezar a gestionar roles y programas de oportunidades."
+              action={{
+                label: 'Nueva Persona',
+                onClick: openNew,
+                icon: Plus,
+              }}
+            />
+          </CardContent>
+        </Card>
       ) : (
-        <DataTable
-          columns={columns}
-          data={persons}
-          searchKey="fullName"
-          searchPlaceholder="Buscar por nombre..."
-          pageSize={pageSize}
-          serverPagination
-          page={page}
-          total={total}
-          onPageChange={(newPage) => { if (newPage !== page) setPage(newPage) }}
-          onPageSizeChange={(newSize) => { if (newSize !== pageSize) { setPageSize(newSize); setPage(1); } }}
-        />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card>
+            <CardContent className="p-0">
+              <DataTable
+                columns={columns}
+                data={persons}
+                searchKey="fullName"
+                searchPlaceholder="Buscar por nombre..."
+                pageSize={pageSize}
+                serverPagination
+                page={page}
+                total={total}
+                onPageChange={(newPage) => { if (newPage !== page) setPage(newPage) }}
+                onPageSizeChange={(newSize) => { if (newSize !== pageSize) { setPageSize(newSize); setPage(1) } }}
+              />
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
 
       {/* Modal */}
@@ -337,13 +373,14 @@ const PersonsPageImproved = () => {
             </div>
 
             {/* Teléfono y Email */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="phone">Teléfono</Label>
                 <Input
                   id="phone"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="+1 (555) 123-4567"
                 />
               </div>
               <div className="space-y-2">
@@ -353,12 +390,13 @@ const PersonsPageImproved = () => {
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="correo@ejemplo.com"
                 />
               </div>
             </div>
 
             {/* Ministerio y Estado */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Ministerio *</Label>
                 <Select
@@ -399,7 +437,12 @@ const PersonsPageImproved = () => {
 
             {/* Prioridad */}
             <div className="space-y-2">
-              <Label>Prioridad: {form.priority}</Label>
+              <div className="flex items-center justify-between">
+                <Label>Prioridad</Label>
+                <span className="text-sm font-semibold text-primary-600 bg-primary-50 px-2 py-0.5 rounded">
+                  {form.priority}
+                </span>
+              </div>
               <input
                 type="range"
                 min="1"
@@ -408,14 +451,18 @@ const PersonsPageImproved = () => {
                 onChange={(e) =>
                   setForm({ ...form, priority: Number(e.target.value) })
                 }
-                className="w-full"
+                className="w-full accent-primary-600"
               />
+              <div className="flex justify-between text-xs text-neutral-400">
+                <span>Baja</span>
+                <span>Alta</span>
+              </div>
             </div>
 
             {/* Roles */}
             <div className="space-y-2">
               <Label>Roles Habilitados *</Label>
-              <div className="flex flex-wrap gap-2 p-3 border border-neutral-200 rounded-lg">
+              <div className="flex flex-wrap gap-2 p-3 border border-neutral-200 rounded-lg bg-neutral-50/50">
                 {roles.map((r) => (
                   <Button
                     key={r._id}
@@ -423,10 +470,16 @@ const PersonsPageImproved = () => {
                     variant={form.roleIds.includes(r._id) ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => toggleRole(r._id)}
+                    className="transition-all"
                   >
                     {r.name}
                   </Button>
                 ))}
+                {roles.length === 0 && (
+                  <p className="text-sm text-neutral-400 py-2">
+                    No hay roles disponibles. Crea roles en Configuración.
+                  </p>
+                )}
               </div>
               <p className="text-xs text-neutral-500">
                 Selecciona al menos un rol
@@ -449,4 +502,4 @@ const PersonsPageImproved = () => {
   )
 }
 
-export default PersonsPageImproved
+export default PersonsPage
