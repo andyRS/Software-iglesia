@@ -88,7 +88,11 @@ function formatTimeDisplay(prog: ProgramData): string {
 const FlyerMiniPreview = ({ prog, churchInfo }: { prog: ProgramData; churchInfo?: any }) => {
   const churchName = prog.church?.name || prog.churchName || churchInfo?.name || 'Iglesia'
   const churchSub = prog.church?.subTitle || prog.churchSub || churchInfo?.subTitle || ''
-  const location = prog.church?.location || prog.location || churchInfo?.address || ''
+  // location/address puede ser string o objeto {city, state, country} - normalizar a string
+  const rawLocation = prog.church?.location || prog.location || churchInfo?.address || ''
+  const location = typeof rawLocation === 'object' && rawLocation !== null
+    ? [rawLocation.city, rawLocation.state, rawLocation.country].filter(Boolean).join(', ')
+    : String(rawLocation)
   const logoUrl = prog.logoUrl || prog.church?.logoUrl || churchInfo?.logoUrl
   const logoSrc = logoUrl ? `/uploads/${logoUrl}` : '/uploads/logo.png'
 
