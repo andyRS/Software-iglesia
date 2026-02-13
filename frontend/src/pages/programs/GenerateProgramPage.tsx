@@ -299,8 +299,8 @@ const GenerateProgramPage = () => {
   const batchDates = (() => {
     if (mode !== 'batch' || !startDate || !endDate || !selectedAct) return []
     try {
-      const start = new Date(startDate + 'T00:00:00')
-      const end = new Date(endDate + 'T00:00:00')
+      const start = new Date(startDate + 'T12:00:00')
+      const end = new Date(endDate + 'T12:00:00')
       if (end < start) return []
       const allDays = eachDayOfInterval({ start, end })
       return allDays.filter(d => getDay(d) === selectedAct.dayOfWeek)

@@ -176,8 +176,11 @@ export const generateBatchPrograms = async (req: AuthRequest, res: Response, nex
     const activity = await ActivityType.findOne({ _id: activityTypeId, churchId: req.churchId });
     if (!activity) throw new NotFoundError('Actividad no encontrada');
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    // Usar T12:00:00 para evitar problemas de zona horaria (UTC vs local)
+    // Sin la hora explícita, new Date('2026-02-21') se interpreta como UTC midnight,
+    // lo que puede cambiar el getDay() en zonas horarias negativas (ej: UTC-4)
+    const start = new Date(startDate + 'T12:00:00');
+    const end = new Date(endDate + 'T12:00:00');
     const dates: Date[] = [];
     const cursor = new Date(start);
 
