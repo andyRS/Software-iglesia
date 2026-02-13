@@ -5,14 +5,17 @@ import {
   Calendar,
   FileText,
   TrendingUp,
-  Download,
+  Activity,
   Loader2,
+  BarChart3,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
+  PieChartIcon,
 } from 'lucide-react'
 import {
-  LineChart,
   Line,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -21,358 +24,420 @@ import {
   PieChart,
   Pie,
   Cell,
+  Area,
+  AreaChart,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import api from '@/lib/api'
+import { Badge } from '@/components/ui/badge'
+import { programsApi } from '@/lib/api'
+
+interface DashboardStats {
+  totalPersons: number
+  totalActivities: number
+  totalPrograms: number
+  upcomingPrograms: number
+  activeMinistries: number
+  participationRate: number
+  programsThisMonth: number
+  ministryDistribution: { name: string; value: number; color: string }[]
+  topParticipants: { name: string; participations: number }[]
+  monthlyTrend: { month: string; participations: number; programs: number }[]
+  recentActivity: { action: string; description: string; time: string; status: string }[]
+}
 
 interface StatCardProps {
   title: string
   value: string | number
   icon: any
-  trend?: {
-    value: number
-    isPositive: boolean
-  }
+  subtitle?: string
   color: string
+  bgColor: string
+  delay?: number
 }
 
-const StatCard = ({ title, value, icon: Icon, trend, color }: StatCardProps) => (
+const StatCard = ({ title, value, icon: Icon, subtitle, color, bgColor, delay = 0 }: StatCardProps) => (
   <motion.div
-    initial={{ opacity: 0, scale: 0.95 }}
-    animate={{ opacity: 1, scale: 1 }}
-    transition={{ duration: 0.3 }}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4, delay }}
   >
-    <Card className="relative overflow-hidden">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-neutral-600">{title}</p>
+    <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-neutral-500">{title}</p>
             <p className="text-3xl font-bold text-neutral-900">{value}</p>
-            {trend && (
-              <div
-                className={`flex items-center gap-1 text-sm font-medium ${
-                  trend.isPositive ? 'text-success-600' : 'text-danger-600'
-                }`}
-              >
-                <TrendingUp
-                  className={`w-4 h-4 ${!trend.isPositive && 'rotate-180'}`}
-                />
-                <span>{trend.value}%</span>
-                <span className="text-neutral-500 font-normal">vs mes anterior</span>
-              </div>
+            {subtitle && (
+              <p className="text-xs text-neutral-400">{subtitle}</p>
             )}
           </div>
-          <div
-            className={`w-14 h-14 rounded-xl flex items-center justify-center ${color}`}
-          >
-            <Icon className="w-7 h-7 text-white" />
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${bgColor}`}>
+            <Icon className={`w-6 h-6 ${color}`} />
           </div>
         </div>
       </CardContent>
-      <div className={`absolute bottom-0 left-0 right-0 h-1 ${color}`} />
     </Card>
   </motion.div>
 )
 
+const StatusIcon = ({ status }: { status: string }) => {
+  switch (status) {
+    case 'PUBLISHED':
+      return <CheckCircle2 className="w-4 h-4 text-success-600" />
+    case 'DRAFT':
+      return <Clock className="w-4 h-4 text-warning-600" />
+    case 'COMPLETED':
+      return <CheckCircle2 className="w-4 h-4 text-primary-600" />
+    case 'CANCELLED':
+      return <XCircle className="w-4 h-4 text-danger-600" />
+    default:
+      return <AlertCircle className="w-4 h-4 text-neutral-400" />
+  }
+}
+
 const DashboardPage = () => {
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({
-    totalPersons: 0,
-    totalPrograms: 0,
-    upcomingPrograms: 0,
-    activeMinistries: 0,
-  })
-
-  // Datos de ejemplo para gráficos
-  const participationData = [
-    { month: 'Ene', participations: 45 },
-    { month: 'Feb', participations: 52 },
-    { month: 'Mar', participations: 48 },
-    { month: 'Abr', participations: 61 },
-    { month: 'May', participations: 55 },
-    { month: 'Jun', participations: 67 },
-  ]
-
-  const ministryData = [
-    { name: 'Adoración', value: 35, color: '#3b82f6' },
-    { name: 'Niños', value: 28, color: '#22c55e' },
-    { name: 'Jóvenes', value: 22, color: '#f59e0b' },
-    { name: 'Ujieres', value: 15, color: '#ef4444' },
-  ]
-
-  const topParticipants = [
-    { name: 'María García', participations: 12 },
-    { name: 'Juan Pérez', participations: 10 },
-    { name: 'Ana López', participations: 9 },
-    { name: 'Carlos Ruiz', participations: 8 },
-    { name: 'Sofía Martín', participations: 7 },
-  ]
+  const [stats, setStats] = useState<DashboardStats | null>(null)
 
   useEffect(() => {
     const loadStats = async () => {
       setLoading(true)
       try {
-        const [personsRes, programsRes] = await Promise.all([
-          api.get('/persons'),
-          api.get('/programs'),
-        ])
-
-        const persons = personsRes.data.data
-        const programs = programsRes.data.data
-
-        setStats({
-          totalPersons: persons.length,
-          totalPrograms: programs.length,
-          upcomingPrograms: programs.filter(
-            (p: any) => new Date(p.programDate) > new Date()
-          ).length,
-          activeMinistries: new Set(
-            persons.map((p: any) => p.ministry).filter(Boolean)
-          ).size,
-        })
+        const res = await programsApi.getStats()
+        setStats(res.data.data)
       } catch (error) {
         console.error('Error loading stats:', error)
       }
       setLoading(false)
     }
-
     loadStats()
   }, [])
 
-  if (loading) {
+  if (loading || !stats) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="flex flex-col items-center justify-center h-96 gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+        <p className="text-sm text-neutral-500">Cargando estadísticas...</p>
       </div>
     )
   }
+
+  const hasMonthlyData = stats.monthlyTrend?.some(m => m.participations > 0)
+  const hasMinistryData = stats.ministryDistribution?.length > 0
+  const hasTopParticipants = stats.topParticipants?.length > 0
+  const hasRecentActivity = stats.recentActivity?.length > 0
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.4 }}
       className="space-y-6"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Dashboard</h1>
-          <p className="text-neutral-600 mt-1">
-            Resumen general de actividades y participantes
-          </p>
-        </div>
-        <Button variant="outline" size="lg">
-          <Download className="w-4 h-4 mr-2" />
-          Exportar Reporte
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold text-neutral-900">Dashboard</h1>
+        <p className="text-neutral-500 mt-1">
+          Resumen general de la iglesia
+        </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* Tarjetas de Estadísticas */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Personas"
           value={stats.totalPersons}
           icon={Users}
-          trend={{ value: 12, isPositive: true }}
-          color="bg-primary-600"
+          subtitle={`${stats.activeMinistries} ministerio${stats.activeMinistries !== 1 ? 's' : ''} activo${stats.activeMinistries !== 1 ? 's' : ''}`}
+          color="text-primary-600"
+          bgColor="bg-primary-50"
+          delay={0}
         />
         <StatCard
           title="Programas"
           value={stats.totalPrograms}
           icon={FileText}
-          trend={{ value: 8, isPositive: true }}
-          color="bg-success-600"
+          subtitle={`${stats.programsThisMonth} este mes`}
+          color="text-success-600"
+          bgColor="bg-success-50"
+          delay={0.05}
         />
         <StatCard
-          title="Próximos Programas"
+          title="Próximos"
           value={stats.upcomingPrograms}
           icon={Calendar}
-          color="bg-warning-600"
+          subtitle="Programas pendientes"
+          color="text-warning-600"
+          bgColor="bg-warning-50"
+          delay={0.1}
         />
         <StatCard
-          title="Ministerios Activos"
-          value={stats.activeMinistries}
+          title="Participación"
+          value={`${stats.participationRate}%`}
           icon={TrendingUp}
-          trend={{ value: 5, isPositive: true }}
-          color="bg-danger-600"
+          subtitle="Tasa de participación mensual"
+          color="text-purple-600"
+          bgColor="bg-purple-50"
+          delay={0.15}
         />
       </div>
 
-      {/* Charts Row 1 */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Participation Trend */}
+      {/* Gráficos: Tendencia + Distribución */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Tendencia Mensual - Ocupa 2 columnas */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
+          className="lg:col-span-2"
         >
-          <Card>
-            <CardHeader>
-              <CardTitle>Participación Mensual</CardTitle>
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-primary-600" />
+                <CardTitle className="text-base">Participación Mensual</CardTitle>
+              </div>
               <CardDescription>
-                Tendencia de participaciones en los últimos 6 meses
+                Tendencia de asignaciones en los últimos 6 meses
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={participationData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      padding: '12px',
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="participations"
-                    stroke="#2563eb"
-                    strokeWidth={3}
-                    dot={{ fill: '#2563eb', r: 5 }}
-                    activeDot={{ r: 7 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {hasMonthlyData ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={stats.monthlyTrend}>
+                    <defs>
+                      <linearGradient id="colorPart" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#fff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '10px',
+                        padding: '10px 14px',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.07)',
+                      }}
+                      formatter={(value: number, name: string) => [
+                        value,
+                        name === 'participations' ? 'Participaciones' : 'Programas',
+                      ]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="participations"
+                      stroke="#3b82f6"
+                      strokeWidth={2.5}
+                      fill="url(#colorPart)"
+                      dot={{ fill: '#3b82f6', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="programs"
+                      stroke="#22c55e"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[280px] text-neutral-400">
+                  <BarChart3 className="w-10 h-10 mb-2 opacity-40" />
+                  <p className="text-sm">No hay datos de participación aún</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Ministry Distribution */}
+        {/* Distribución por Ministerio */}
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
         >
-          <Card>
-            <CardHeader>
-              <CardTitle>Distribución por Ministerio</CardTitle>
-              <CardDescription>
-                Porcentaje de personas por ministerio
-              </CardDescription>
+          <Card className="border-0 shadow-sm h-full">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <PieChartIcon className="w-5 h-5 text-success-600" />
+                <CardTitle className="text-base">Ministerios</CardTitle>
+              </div>
+              <CardDescription>Distribución de personas</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={ministryData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {ministryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+              {hasMinistryData ? (
+                <div>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <PieChart>
+                      <Pie
+                        data={stats.ministryDistribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={75}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {stats.ministryDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#fff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                        }}
+                        formatter={(value: number) => [`${value} personas`, '']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="space-y-1.5 mt-2">
+                    {stats.ministryDistribution.slice(0, 5).map((m, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{ backgroundColor: m.color }}
+                          />
+                          <span className="text-neutral-600 truncate max-w-[120px]">{m.name}</span>
+                        </div>
+                        <span className="font-medium text-neutral-900">{m.value}</span>
+                      </div>
                     ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[280px] text-neutral-400">
+                  <Users className="w-10 h-10 mb-2 opacity-40" />
+                  <p className="text-sm">No hay ministerios registrados</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
       </div>
 
-      {/* Top Participants */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Participantes</CardTitle>
-            <CardDescription>
-              Personas con más participaciones este mes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topParticipants} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis type="number" stroke="#6b7280" />
-                <YAxis dataKey="name" type="category" stroke="#6b7280" width={120} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    padding: '12px',
-                  }}
-                />
-                <Bar
-                  dataKey="participations"
-                  fill="#22c55e"
-                  radius={[0, 8, 8, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Recent Activity */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle>Actividad Reciente</CardTitle>
-            <CardDescription>Últimas acciones en el sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                {
-                  action: 'Programa creado',
-                  description: 'Culto Domingo - 14 Enero 2024',
-                  time: 'Hace 2 horas',
-                },
-                {
-                  action: 'Nueva persona registrada',
-                  description: 'María González - Ministerio de Adoración',
-                  time: 'Hace 5 horas',
-                },
-                {
-                  action: 'Programa publicado',
-                  description: 'Reunión de Jóvenes - 12 Enero 2024',
-                  time: 'Hace 1 día',
-                },
-              ].map((activity, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-4 pb-4 border-b border-neutral-200 last:border-0 last:pb-0"
-                >
-                  <div className="w-2 h-2 mt-2 rounded-full bg-primary-600" />
-                  <div className="flex-1">
-                    <p className="font-medium text-neutral-900">
-                      {activity.action}
-                    </p>
-                    <p className="text-sm text-neutral-600">
-                      {activity.description}
-                    </p>
-                    <p className="text-xs text-neutral-500 mt-1">
-                      {activity.time}
-                    </p>
-                  </div>
+      {/* Top Participantes + Actividad Reciente */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Top Participantes */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <Activity className="w-5 h-5 text-warning-600" />
+                <CardTitle className="text-base">Top Participantes</CardTitle>
+              </div>
+              <CardDescription>
+                Personas con más asignaciones (últimos 6 meses)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {hasTopParticipants ? (
+                <div className="space-y-3">
+                  {stats.topParticipants.map((p, i) => {
+                    const maxVal = stats.topParticipants[0]?.participations || 1
+                    const pct = Math.round((p.participations / maxVal) * 100)
+                    return (
+                      <div key={i} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-neutral-100 text-xs font-bold text-neutral-600">
+                              {i + 1}
+                            </span>
+                            <span className="text-sm font-medium text-neutral-800 truncate max-w-[200px]">
+                              {p.name}
+                            </span>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            {p.participations}
+                          </Badge>
+                        </div>
+                        <div className="w-full bg-neutral-100 rounded-full h-1.5 ml-8">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.6, delay: 0.1 * i }}
+                            className="bg-gradient-to-r from-primary-400 to-primary-600 h-1.5 rounded-full"
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-48 text-neutral-400">
+                  <Users className="w-10 h-10 mb-2 opacity-40" />
+                  <p className="text-sm">No hay participaciones registradas</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Actividad Reciente */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+        >
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-purple-600" />
+                <CardTitle className="text-base">Actividad Reciente</CardTitle>
+              </div>
+              <CardDescription>Últimas acciones en el sistema</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {hasRecentActivity ? (
+                <div className="space-y-4">
+                  {stats.recentActivity.map((activity, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.05 * index }}
+                      className="flex items-start gap-3"
+                    >
+                      <div className="mt-0.5">
+                        <StatusIcon status={activity.status} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-neutral-900">
+                          {activity.action}
+                        </p>
+                        <p className="text-sm text-neutral-500 truncate">
+                          {activity.description}
+                        </p>
+                        <p className="text-xs text-neutral-400 mt-0.5">
+                          {activity.time}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-48 text-neutral-400">
+                  <Clock className="w-10 h-10 mb-2 opacity-40" />
+                  <p className="text-sm">No hay actividad reciente</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     </motion.div>
   )
 }
