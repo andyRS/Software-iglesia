@@ -27,14 +27,14 @@ import {
 
 const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
-const DAY_COLORS: Record<number, { bg: string; border: string; badge: string }> = {
-  0: { bg: 'bg-red-50/50', border: 'border-red-200', badge: 'bg-red-100 text-red-700' },
-  1: { bg: 'bg-neutral-50/50', border: 'border-neutral-200', badge: 'bg-neutral-100 text-neutral-700' },
-  2: { bg: 'bg-blue-50/50', border: 'border-blue-200', badge: 'bg-blue-100 text-blue-700' },
-  3: { bg: 'bg-green-50/50', border: 'border-green-200', badge: 'bg-green-100 text-green-700' },
-  4: { bg: 'bg-yellow-50/50', border: 'border-yellow-200', badge: 'bg-yellow-100 text-yellow-700' },
-  5: { bg: 'bg-pink-50/50', border: 'border-pink-200', badge: 'bg-pink-100 text-pink-700' },
-  6: { bg: 'bg-purple-50/50', border: 'border-purple-200', badge: 'bg-purple-100 text-purple-700' },
+const DAY_COLORS: Record<number, { bg: string; border: string; badge: string; pillBorder: string }> = {
+  0: { bg: 'bg-red-50/50', border: 'border-red-200', badge: 'bg-red-100 text-red-700', pillBorder: 'border-red-400' },
+  1: { bg: 'bg-neutral-50/50', border: 'border-neutral-200', badge: 'bg-neutral-100 text-neutral-700', pillBorder: 'border-neutral-400' },
+  2: { bg: 'bg-blue-50/50', border: 'border-blue-200', badge: 'bg-blue-100 text-blue-700', pillBorder: 'border-blue-400' },
+  3: { bg: 'bg-green-50/50', border: 'border-green-200', badge: 'bg-green-100 text-green-700', pillBorder: 'border-green-400' },
+  4: { bg: 'bg-yellow-50/50', border: 'border-yellow-200', badge: 'bg-yellow-100 text-yellow-700', pillBorder: 'border-yellow-400' },
+  5: { bg: 'bg-pink-50/50', border: 'border-pink-200', badge: 'bg-pink-100 text-pink-700', pillBorder: 'border-pink-400' },
+  6: { bg: 'bg-purple-50/50', border: 'border-purple-200', badge: 'bg-purple-100 text-purple-700', pillBorder: 'border-purple-400' },
 }
 
 const ActivityTypesPage = () => {
@@ -370,7 +370,7 @@ const ActivityTypesPage = () => {
                       onClick={() => toggleDay(i)}
                       className={`px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-all ${
                         selected
-                          ? `${colors.badge} border-current shadow-sm`
+                          ? `${colors.badge} ${colors.pillBorder} shadow-sm`
                           : 'bg-neutral-50 text-neutral-400 border-neutral-200 hover:border-neutral-300'
                       }`}
                     >
@@ -385,7 +385,7 @@ const ActivityTypesPage = () => {
                 <div className="space-y-2 mt-2">
                   <Label className="text-xs text-neutral-500">Hora por día</Label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {form.schedule
+                    {[...form.schedule]
                       .sort((a, b) => a.day - b.day)
                       .map((s) => (
                         <div key={s.day} className="flex items-center gap-2 p-2 bg-neutral-50 rounded-lg border border-neutral-200">
